@@ -3,6 +3,10 @@ library(dplyr)
 library(lubridate)
 library(neonUtilities)
 
+#---------------------------------------------------------------------------------------
+
+# PLANT PHENOLOGY DATA
+
 # set working directory
 setwd("~/Documents/data-for-proj")
 
@@ -59,5 +63,53 @@ phe_ind <- select(phe_ind, -geodeticDatum, -coordinateUncertainty, -elevationUnc
 phe_ind <- select(phe_ind, -measuredByStat, -recordedByStat, -sampleGeodeticDatum, -samplingProtocolVersion,
                   -measuredBy, -identifiedBy, -recordedBy)
 
+
+# saving the phe_ind object in R
+save(phe_ind, file = "phe_ind.RData")
+
 ### phe_ind is now ready to be used to pull info about specific sites
 #############
+
+
+
+
+#-----------------------------------------------------------------------------------------------------------------
+
+# TOWER TEMPERATURE DATA
+
+
+library(scales)
+library(tidyr)
+
+# stack the files in the single aspirated air temperature data for D01
+# stackByTable(filepath = "/Users/kbradlee/Documents/data-for-proj/NEON_temp-air-single-D01.zip")
+
+# read in the 30 minute temperature data 
+temp30_D01 <- read.csv("NEON_temp-air-single-D01/stackedFiles/SAAT_30min.csv", stringsAsFactors = FALSE)
+
+# check for NAs
+sum(is.na(temp30_D01$tempSingleMean))
+# remove the NAs from the dataframe
+temp30_D01 <- temp30_D01 %>%
+  drop_na(tempSingleMean)
+# check to see if it worked
+sum(is.na(temp30_D01$tempSingleMean))
+
+# check format of the dates
+str(temp30_D01$startDateTime)
+
+# convert to date-time class 
+temp30_D01$startDateTime <- as.POSIXct(temp30_D01$startDateTime,
+      format = "%Y-%m-%dT%H:%M:%SZ", tz = "GMT")
+# checking to see if it's in the right format
+str(temp30_D01$startDateTime)
+
+# convert to local time zone
+# convert to local tz in new column
+# D01 in Eastern Time Zone
+temp30_D01$dtLocal <- format(temp30_D01$startDateTime, tz = "America/New_York", usetz = TRUE)
+# check it
+head(select(temp30_D01, startDateTime, dtLocal))
+
+# saving the temperature data for D01 to be used 
+save(temp30_D01, file = "temp30_D01.RData")
