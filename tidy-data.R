@@ -31,14 +31,16 @@ status_noD <- distinct(status)
 
 # rename variables in the status object to have "Stat" at the end of the variable name before joining the datasets
 status_noD <- rename(status_noD, editedDateStat = editedDate, measuredByStat = measuredBy, recordedByStat = recordedBy,
-                   samplingProtocolVersionStat = samplingProtocolVersion, remarksStat = remarks, dataQFStat = dataQF,
-                   dateStat = date)
+                   samplingProtocolVersionStat = samplingProtocolVersion, remarksStat = remarks, dataQFStat = dataQF)
+
+# rename variables in ind so that it doesn't conflict later on when joining the dataframes
+ind_noD <- rename(ind_noD, addDate = date)
 
 # convert the date columns from character class to date class for ind and status
 ind_noD$editedDate <- as.Date(ind_noD$editedDate)
-str(ind_noD$editedDate)
-status_noD$dateStat <- as.Date(status_noD$dateStat)
-str(status_noD$date)
+#ind_noD$date <- as.Date(ind_noD$date)
+status_noD$date <- as.Date(status_noD$date)
+
 
 
 # retain only the latest editedDate for each individualID on ind and get rid of duplicate dates
@@ -51,6 +53,7 @@ ind_lastnoD <- ind_noD %>%
 ###########
 # join the two dataframes together into one table
 # this will be the table that is used to then narrow sites and species and phenophases
+
 phe_ind <- left_join(status_noD, ind_lastnoD)
 
 
