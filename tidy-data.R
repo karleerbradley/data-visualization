@@ -2,6 +2,9 @@ library(ggplot2)
 library(dplyr)
 library(lubridate)
 library(neonUtilities)
+library(devtools)
+library(geoNEON)
+
 
 #---------------------------------------------------------------------------------------
 
@@ -9,6 +12,25 @@ library(neonUtilities)
 
 # set working directory
 setwd("~/Documents/data-for-proj")
+
+
+
+# setting file paths for where the data is 
+if (file.exists(
+  'C:/Users/kbradlee')){
+  myPathToGit <- "C:/Users/kbradlee/Desktop/data-visualization"
+  myPathToData <- "/Users/kbradlee/Documents/data-for-proj"
+}
+
+# pull plant phenology data via api instead of on local directory
+dpid <- as.character('DP1.10055.001')
+zipsByProduct(dpID=dpid, site="all", package="basic")
+stackByTable(paste0(getwd(), "/filesToStack10055"), folder=T)
+
+
+ind <- read.csv(paste(myPathToData, "filesToStack10055/stackedFiles/phe_perindividual.csv", sep = "/"),  header = T)
+status <- read.csv(paste(myPathToData, "filesToStack10055/stackedFiles/phe_statusintensity.csv", sep = "/"), header = T)
+
 
 # stack the files in the plant phenology data
 # stackByTable(filepath = "/Users/kbradlee/Documents/data-for-proj/NEON_obs-phenology-plant.zip")
@@ -38,7 +60,6 @@ ind_noD <- rename(ind_noD, addDate = date)
 
 # convert the date columns from character class to date class for ind and status
 ind_noD$editedDate <- as.Date(ind_noD$editedDate)
-#ind_noD$date <- as.Date(ind_noD$date)
 status_noD$date <- as.Date(status_noD$date)
 
 
@@ -67,11 +88,31 @@ phe_ind <- select(phe_ind, -measuredByStat, -recordedByStat, -sampleGeodeticDatu
                   -measuredBy, -identifiedBy, -recordedBy)
 
 
+
+# adding other date columns for better date analysis
+phe_ind$dayOfYear <- yday(phe_ind$date)
+phe_ind$year <- substr(phe_ind$date, 1, 4)
+phe_ind$monthDay <- format(phe_ind$date, format = "%m-%d")
+
+
+
+
+# using geoNEON package to find locations
+# adding latitude and longitude from geoNEON to phe_ind, and elevation
+spatialOnly <- def.extr.geo.os(phe_ind, 'namedLocation', locOnly = T)
+phe_ind$latitude <- spatialOnly$api.decimalLatitude[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
+phe_ind$longitude <- spatialOnly$api.decimalLongitude[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
+phe_ind$elevation <- spatialOnly$api.elevation[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
+
+
+
+
 # saving the phe_ind object in R
 save(phe_ind, file = "phe_ind.RData")
 
 ### phe_ind is now ready to be used to pull info about specific sites
 #############
+
 
 
 
