@@ -148,10 +148,11 @@ DBL_P_2017
 
 
 
-# putting the % in Leaf and AGDD together
+# putting the % in Leaf and AGDD together after zoomed in
 grid.arrange(DBL_P_2017, AGDD_2017)
 
-
+# putting the % in Leaf and AGDD_2 together after zoomed in
+grid.arrange(DBL_P_2017, AGDD_2017_2)
 
 
   
