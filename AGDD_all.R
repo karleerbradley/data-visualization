@@ -106,7 +106,18 @@ day_temp$monthDay <- format(day_temp$date, format = "%m-%d")
 #plot it
 # calculates AGDDs from the beginning of data collection and not just for the specified year
 # now plots from beginning of year
-ggplot(data=day_temp, aes(x=dayOfYear, y=AGDD, group = 1)) +
-  geom_path() + xlab("Day of Year")
+AGDD_2017 <- ggplot(data=day_temp, aes(x=dayOfYear, y=AGDD, group = 1)) +
+  geom_path() + xlab("Day of Year") + ggtitle("Aggregated Growing Degree Days in 2017")
+AGDD_2017
 # curve is weird at the end because the dates aren't all in order
 # now dates are in order after adding arrange(date) above
+
+
+
+
+
+# zooming in on the graph so easier to compare with DBL_P_2017
+AGDD_2017 <- ggplot(data=day_temp, aes(x=dayOfYear, y=AGDD, group = 1)) +
+  geom_path() + xlab("Day of Year") + ggtitle("Aggregated Growing Degree Days in 2017") + xlim(c(100, 350))
+AGDD_2017
+# putting the graphs together to compare in HARV.R
