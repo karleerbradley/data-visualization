@@ -132,7 +132,7 @@ This pulls the temperature data for all of the sites specified.
 
 # pulling the air temp data via api
 dpid <- as.character('DP1.00002.001')  ##single aspirated air temperature
-sites <- c("HARV", "SERC", "UNDE", "UKFS", "ORNL", "CLBJ", "ABBY", "TOOL", "BONA")
+sites <- c("HARV", "SERC", "UNDE", "UKFS", "ORNL", "CLBJ", "ABBY", "TOOL", "BONA", "BART")
 
 
 #zipsByProduct(dpID=dpid, site=sites, package="basic", avg = "30")
@@ -346,7 +346,7 @@ phenoPlot_all <- ggplot(inStat_T, aes(date, n.y, color = siteID)) +
   xlab("Date") + ylab("Number of Individuals") +
   theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
   theme(text = element_text(size = 18)) +
-  scale_color_brewer(palette = "Set1")
+  scale_color_brewer(palette = "Paired")
 phenoPlot_all
 
 ```
@@ -366,7 +366,7 @@ phenoPlot_P_all <- ggplot(inStat_T, aes(date, percent, color = siteID)) +
   xlab("Date") + ylab("% of Individuals") +
   theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
   theme(text = element_text(size = 18)) +
-  scale_color_brewer(palette = "Set1")
+  scale_color_brewer(palette = "Paired")
 phenoPlot_P_all
 
 ```
@@ -387,7 +387,7 @@ leaves17_all <- ggplot(inStat_T, aes(date, percent, color = siteID)) +
   (scale_x_date(limits = start.end, date_breaks = "1 month", date_labels = "%b")) +
   theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
   theme(text = element_text(size = 18)) +
-  scale_color_brewer(palette = "Set1")
+  scale_color_brewer(palette = "Paired")
 leaves17_all
 
 ```
@@ -410,7 +410,7 @@ leaves16_all <- ggplot(inStat_T, aes(date, percent, color = siteID)) +
   (scale_x_date(limits = start16.end16, date_breaks = "1 month", date_labels = "%b")) +
   theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
   theme(text = element_text(size = 18)) + 
-  scale_color_brewer(palette = "Set1")
+  scale_color_brewer(palette = "Paired")
 leaves16_all
 
 ```
@@ -532,6 +532,9 @@ inStat_T_17 <- inStat_T %>%
 
 harv$dayOfYear <- yday(harv$date)
 
+harv <- harv %>%
+  filter(year(date) == "2017")
+
 ```
 
 #### Percentage of Different Species in 2017
@@ -542,7 +545,7 @@ harv$dayOfYear <- yday(harv$date)
 
 # bar graph that shows how much of 100% is ACRU and how much is QURU for each day of the year
 # can see that for some days, both of them aren't in leaves, ACRU looks like it changes faster than QURU
-DBL_P_2017 <- ggplot(data = harv, aes(x=dayOfYear, y=percent,  color = taxonID)) +
+DBL_P_2017 <- ggplot(data = harv, aes(x=dayOfYear, y=percent, color = taxonID)) +
   geom_col() + xlab("Day of Year") + ylab("% of DBL") +
   ggtitle("Percent of Deciduous Broadleaf Species in Leaf in 2017") +
   labs(color = "Species") + theme(legend.position = "top") + xlim(c(0,365))
