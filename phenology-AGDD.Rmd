@@ -365,7 +365,8 @@ phenoPlot_P_all <- ggplot(inStat_T, aes(date, percent, color = siteID)) +
   ggtitle("Percentage in the Leaves Phenophase") +
   xlab("Date") + ylab("% of Individuals") +
   theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
-  theme(text = element_text(size = 18))
+  theme(text = element_text(size = 18)) +
+  scale_color_brewer(palette = "Set1")
 phenoPlot_P_all
 
 ```
@@ -529,6 +530,8 @@ inStat_T$dayOfYear <- yday(inStat_T$date)
 inStat_T_17 <- inStat_T %>%
   filter(year(date)=="2017")
 
+harv$dayOfYear <- yday(harv$date)
+
 ```
 
 #### Percentage of Different Species in 2017
@@ -539,11 +542,32 @@ inStat_T_17 <- inStat_T %>%
 
 # bar graph that shows how much of 100% is ACRU and how much is QURU for each day of the year
 # can see that for some days, both of them aren't in leaves, ACRU looks like it changes faster than QURU
-DBL_P_2017 <- ggplot(data = inStat_T_17, aes(x=dayOfYear, y=percent, group = 1, color = taxonID)) +
+DBL_P_2017 <- ggplot(data = harv, aes(x=dayOfYear, y=percent,  color = taxonID)) +
   geom_col() + xlab("Day of Year") + ylab("% of DBL") +
   ggtitle("Percent of Deciduous Broadleaf Species in Leaf in 2017") +
   labs(color = "Species") + theme(legend.position = "top") + xlim(c(0,365))
 DBL_P_2017
+
+
+```
+
+#### Have to filter AGDDs so they are plotted just for HARV
+
+```{r agdd_harv}
+
+temp_harv <- day_temp %>%
+  filter(siteID == "HARV")
+
+temp_harv_2 <- day_temp_2 %>%
+  filter(siteID == "HARV")
+
+
+# plotting AGDDs for 2017 
+AGDD_2017 <- ggplot(data=temp_harv, aes(x=dayOfYear, y=AGDD)) +
+  geom_path() + xlab("Day of Year") + ggtitle("Aggregated Growing Degree Days in 2017") +
+  scale_color_brewer(palette = "Paired")
+AGDD_2017
+
 
 ```
 
@@ -566,19 +590,19 @@ grid.arrange(DBL_P_2017, AGDD_2017)
 ```{r zoom}
 
 # zooming on on graph so that it's easier to compare with AGDD_2017
-DBL_P_2017 <- ggplot(data = inStat_T_17, aes(x=dayOfYear, y=percent, group = 1, color = taxonID)) +
+DBL_P_2017 <- ggplot(data = harv, aes(x=dayOfYear, y=percent,  color = taxonID)) +
   geom_col() + xlab("Day of Year") + ylab("% of DBL") +
   ggtitle("Percent of Deciduous Broadleaf Species in Leaf in 2017") +
   labs(color = "Species") + theme(legend.position = "top") + xlim(c(100,350))
 DBL_P_2017
 
 # zooming in on the graph so easier to compare with DBL_P_2017
-AGDD_2017_ <- ggplot(data=day_temp, aes(x=dayOfYear, y=AGDD, group = 1)) +
+AGDD_2017_ <- ggplot(data=temp_harv, aes(x=dayOfYear, y=AGDD, group = 1)) +
   geom_path() + xlab("Day of Year") + ggtitle("Aggregated Growing Degree Days in 2017") + xlim(c(100, 350))
 AGDD_2017_
 
 # putting the % in Leaf and AGDD together after zoomed in
-grid.arrange(DBL_P_2017, AGDD_2017)
+grid.arrange(DBL_P_2017, AGDD_2017_)
 
 ```
 
@@ -587,12 +611,12 @@ grid.arrange(DBL_P_2017, AGDD_2017)
 ```{r min-max-zoom}
 
 # zooming in on the graph so easier to compare with DBL_P_2017
-AGDD_2017_2_ <- ggplot(data=day_temp_2, aes(x=dayOfYear, y=AGDD, group = 1)) +
+AGDD_2017_2_ <- ggplot(data=temp_harv_2, aes(x=dayOfYear, y=AGDD, group = 1)) +
   geom_path() + xlab("Day of Year") + ggtitle("Aggregated Growing Degree Days in 2017") + xlim(c(100, 350))
 AGDD_2017_2_
 
 # putting the % in Leaf and AGDD_2 together after zoomed in
-grid.arrange(DBL_P_2017, AGDD_2017_2)
+grid.arrange(DBL_P_2017, AGDD_2017_2_)
 
 ```
 
