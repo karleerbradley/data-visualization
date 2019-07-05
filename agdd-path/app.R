@@ -1,5 +1,9 @@
 
 library(shiny)
+library(dplyr)
+library(ggplot2)
+
+temp_data <- read.csv("temp_data.csv", stringsAsFactors = FALSE)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -30,7 +34,7 @@ server <- function(input, output) {
     
     output$pathPlot <- renderPlot({
         
-        temp_select <- day_temp_2 %>%
+        temp_select <- temp_data %>%
             filter(siteID %in% input$checkGroup)
         
         ggplot(data=temp_select, aes(x=dayOfYear, y=AGDD, color = siteID)) +
