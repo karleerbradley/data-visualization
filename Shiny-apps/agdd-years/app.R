@@ -43,17 +43,16 @@ server <- function(input, output, session) {
   # the years with available data are shown for you to choose from
   observe({
     x <- input$select
-    
-    if (x == "BART" | x=="HARV" | x=="UNDE")
-      updateCheckboxGroupInput(session, "checkGroup", choices = list("2014" = "2014", "2015"="2015",
-                                                                     "2016"="2016", "2017" = "2017", "2018"="2018", "2019"="2019"))
-    if (x == "ORNL")
+
+    if (x == "ORNL" | x == "BART" | x=="HARV" | x=="UNDE")
       updateCheckboxGroupInput(session, "checkGroup", choices = list("2015"="2015",
                                                                      "2016"="2016", "2017" = "2017", "2018"="2018", "2019"="2019"))
     if (x == "SERC" | x=="UKFS" | x=="ABBY")
       updateCheckboxGroupInput(session, "checkGroup", choices = list("2016"="2016", "2017" = "2017", "2018"="2018", "2019"="2019"))
-    if (x == "BONA" | x=="CLBJ" | x=="TOOL")
+    if (x=="CLBJ" | x=="TOOL")
       updateCheckboxGroupInput(session, "checkGroup", choices = list("2017" = "2017", "2018"="2018", "2019"="2019"))
+    if (x=="BONA")
+      updateCheckboxGroupInput(session, "checkGroup", choices = list( "2018"="2018", "2019"="2019"))
   })
   
   
@@ -69,8 +68,9 @@ server <- function(input, output, session) {
     # plots the data with the different years as the different lines
     ggplot(data=site_select, aes(x=dayOfYear, y=AGDD, color = as.factor(year))) +
       geom_path() + xlab("Day of Year") + ggtitle("Accumulated Growing Degree Days Over Years") +
-      scale_color_brewer(palette = "Set1") + ylab("AGGDs")  + xlim(c(0,366))+
-      theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) + labs(color="Year")
+      scale_color_brewer(palette = "Dark2") + ylab("AGGDs")  + xlim(c(0,366))+
+      theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) + labs(color="Year") +
+      theme_bw()
   })
  
   

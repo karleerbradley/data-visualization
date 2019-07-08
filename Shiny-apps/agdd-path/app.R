@@ -45,8 +45,9 @@ server <- function(input, output) {
         # plot of AGDDs in 2017 for chosen sites as different colors
         ggplot(data=temp_select, aes(x=dayOfYear, y=AGDD, color = siteID)) +
             geom_path() + xlab("Day of Year") + ggtitle("Accumulated Growing Degree Days in 2017") +
-            scale_color_brewer(palette = "Paired") + ylab("AGGDs") + ylim(c(0, 6500)) + xlim(c(0,365))+
-            theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) 
+          scale_colour_manual(values = c("maroon1", "purple", "orange", "navyblue", "darkcyan",
+                                         "brown", "cyan", "springgreen1", "black", "red")) + ylab("AGGDs") + ylim(c(0, 6500)) + xlim(c(0,365))+
+            theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) + theme_bw()
     })
 }
 
