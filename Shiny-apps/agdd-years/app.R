@@ -18,11 +18,11 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
           # dropdown select menu
-            selectInput("select", label = h3("NEON Sites"), choices = list("Harvard Forest" = "HARV", "Bartlett Experimental Forest" = "BART", 
-                                        "Smithsonian Environmental Research Center" = "SERC", "UNDERC" = "UNDE", 
-                                        "The Universtiy of Kansas Field Station" = "UKFS", "Oak Ridge" = "ORNL",
-                                       "LBJ National Grassland" = "CLBJ", "Abby Road" = "ABBY", "Toolik Lake" = "TOOL",
-                                       "Caribou Creek" = "BONA"), selected = "HARV"),
+            selectInput("select", label = h3("NEON Sites"), choices = list("Harvard Forest (HARV)" = "HARV", "Bartlett Experimental Forest (BART)" = "BART", 
+                                        "Smithsonian Environmental Research Center (SERC)" = "SERC", "University of Notre Dame Environmental Research Center (UNDE)" = "UNDE", 
+                                        "The Universtiy of Kansas Field Station (UKFS)" = "UKFS", "Oak Ridge (ORNL)" = "ORNL",
+                                       "LBJ National Grassland (CLBJ)" = "CLBJ", "Abby Road (ABBY)" = "ABBY", "Toolik Lake (TOOL)" = "TOOL",
+                                       "Caribou Creek (BONA)" = "BONA"), selected = "HARV"),
           # checkbox so can pick as many years as you want
             checkboxGroupInput("checkGroup", label = h3("Years"), choices = list("2014" = "2014", "2015"="2015",
                                             "2016"="2016", "2017" = "2017", "2018"="2018", "2019"="2019"), selected = NULL)
