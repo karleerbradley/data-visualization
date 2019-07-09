@@ -1,3 +1,4 @@
+# agdd-years
 
 library(shiny)
 library(dplyr)
@@ -31,7 +32,7 @@ ui <- fluidPage(
 
         # shows the plot in the main panel
         mainPanel(
-           plotOutput("pathPlot")
+           plotOutput("pathPlot2")
         )
     )
 )
@@ -57,7 +58,7 @@ server <- function(input, output, session) {
   
   
 # the output part for the plot  
-  output$pathPlot <- renderPlot({
+  output$pathPlot2 <- renderPlot({
     
   # depending on which site you choose, a dataframe is filtered to only have data from chosen site
     # the data is filtered depending on which years you choose to view
