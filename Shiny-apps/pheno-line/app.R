@@ -15,16 +15,17 @@ ui <- fluidPage(
     # Sidebar 
     sidebarLayout(
         sidebarPanel(
+          helpText("Choose a year and a phenophase to observe in that year and choose which sites to compare in the chosen phenophase."),
           # drop down menu to pick one year to look at 
-            selectInput("select", label = h3("Year"), choices = list("2014"="2014", "2015"="2015", "2016"="2016",
+            selectInput("select", label = h3(span("Year", style = "color:darkblue")), choices = list("2014"="2014", "2015"="2015", "2016"="2016",
                                  "2017"="2017", "2018"="2018", "2019"="2019"), selected = NULL),
             # drop down to pick one phenophase to observe
-            selectInput("select2", label = h3("Phenophase"), choices = list("Breaking Leaf Buds"="Breaking leaf buds",
+            selectInput("select2", label = h3(span("Phenophase", style = "color:darkblue")), choices = list("Breaking Leaf Buds"="Breaking leaf buds",
                             "Increasing Leaf Size"="Increasing leaf size", "Open Flowers"="Open flowers",
                             "Leaves"="Leaves", "Colored Leaves"="Colored leaves", 
                             "Falling Leaves"="Falling leaves"), selected = NULL) ,
             # can choose multiple sites to plot
-            checkboxGroupInput("checkGroup", label = h3("NEON Sites"),
+            checkboxGroupInput("checkGroup", label = h3(span("NEON Sites", style = "color:darkblue")),
                         choices = list("Harvard Forest (HARV)" = "HARV", "Bartlett Experimental Forest (BART)" = "BART",
                                "Smithsonian Environmental Research Center (SERC)" = "SERC", "University of Notre Dame Environmental Research Center (UNDE)" = "UNDE", 
                                "The Universtiy of Kansas Field Station (UKFS)" = "UKFS", "Oak Ridge (ORNL)" = "ORNL",
@@ -185,10 +186,11 @@ server <- function(input, output, session) {
       ggplot(phenoStat_T, aes(dayOfYear, percent, color = siteID)) +
         geom_line(stat = "identity", na.rm = TRUE) +
         ggtitle("Percentage in Chosen Phenophase") +
-        xlab("Day Of Year") + ylab("% of Individuals") + xlim(0,366) + ylim(0,100) +
-        theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
-        theme(text = element_text(size = 18)) +
-        scale_color_brewer(palette = "Paired")
+        xlab("Day Of Year") + ylab("% of Individuals") + xlim(0,366) + ylim(0,100) + theme_bw() +
+        theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20, hjust = 0.5)) +
+        theme(text = element_text(size = 15)) +
+        scale_colour_manual(values = c("maroon1", "purple", "orange", "navyblue", "cyan",
+                                       "brown", "darkcyan", "black", "springgreen1", "red"))
       
     })
 }
