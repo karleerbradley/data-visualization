@@ -1,9 +1,16 @@
 2017 AGDD Paths: https://kbradle1.shinyapps.io/agdd-path/
+	this link was archived because there can only be 5 running apps 
+	at a time in my shinyapps.io account
 
 AGDDs Over Years: https://kbradle1.shinyapps.io/agdd-years/
+	this link was also archived
 
 Phenophases: https://kbradle1.shinyapps.io/pheno-line/
 
 AGDD By and Across Years: https://kbradle1.shinyapps.io/agdd-tabsets/
 
 Phenophases By Year: https://kbradle1.shinyapps.io/pheno-area/
+
+Phenophases By Year and Across Sites: 
+	https://kbradle1.shinyapps.io/pheno-tabs/
+
