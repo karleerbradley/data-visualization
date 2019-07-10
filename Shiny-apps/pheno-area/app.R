@@ -60,7 +60,9 @@ server <- function(input, output, session) {
      })
   
 
-  
+  # when a year isn't chosen, an error shows in the main panel
+  # with this, instead of putting the error message, it shows this sentence so user
+  # knows what they need to do.
     output$areaPlot <- renderPlot({
       validate(
         need(input$checkGroup != "", "Please select at least one year to plot.")
@@ -95,7 +97,7 @@ server <- function(input, output, session) {
   ggplot(phenoStat_T, aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName)) +
      #geom_density(alpha=0.3,stat = "identity", position = position_dodge(width = .1)) +
     geom_density(alpha=0.3,stat = "identity", position = "stack") +  
-    theme_bw() + facet_grid(cols = vars(commonName),rows = vars(year)) +
+    theme_bw() + facet_grid(cols = vars(commonName),rows = vars(year), scale = "free_y") +
     xlab("Day Of Year") + ylab("% of Individuals") + xlim(0,366) +
     ggtitle("Phenophase Density for Selected Site") +
     theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20, hjust = 0.5)) +
