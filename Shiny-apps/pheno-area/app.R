@@ -1,3 +1,5 @@
+# pheno-area app
+
 
 library(shiny)
 library(dplyr)
@@ -38,7 +40,7 @@ ui <- fluidPage(
     )
 )
 
-# Define server logic required to draw a histogram
+# Define server logic 
 server <- function(input, output, session) {
   # since some sites have data for years that others don't, depending on what site you choose, 
   # the years with available data are shown for you to choose from
@@ -54,10 +56,16 @@ server <- function(input, output, session) {
       updateCheckboxGroupInput(session, "checkGroup", choices = list("2017" = "2017", "2018"="2018", "2019"="2019"))
     if (x=="BONA")
       updateCheckboxGroupInput(session, "checkGroup", choices = list( "2018"="2018", "2019"="2019"))
-  })
+
+     })
   
+
   
     output$areaPlot <- renderPlot({
+      validate(
+        need(input$checkGroup != "", "Please select at least one year to plot.")
+      )
+      
   pheno <- DBL %>%
     filter(siteID %in% input$select) %>%
     filter(year %in% input$checkGroup)
@@ -67,7 +75,7 @@ server <- function(input, output, session) {
     group_by(siteID) %>%
     count(date)
   phenoStat <- pheno %>%
-    group_by(date, siteID, taxonID, phenophaseName) %>%
+    group_by(date, siteID, taxonID, phenophaseName, commonName) %>%
     count(phenophaseStatus) 
   phenoStat <- full_join(phenoSamp, phenoStat, by = c("date", "siteID"))
   ungroup(phenoStat)
@@ -85,11 +93,15 @@ server <- function(input, output, session) {
 
   
   ggplot(phenoStat_T, aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName)) +
-  #geom_density(position="stack")+  # stacks data vertically
-  #geom_density(alpha=0.8)+  # sensitivity of the curves
-    geom_density(alpha=0.3,stat = "identity", position = "stack")+  theme_bw() +
-    facet_grid(cols = vars(taxonID),rows = vars(year)) 
-  
+     #geom_density(alpha=0.3,stat = "identity", position = position_dodge(width = .1)) +
+    geom_density(alpha=0.3,stat = "identity", position = "stack") +  
+    theme_bw() + facet_grid(cols = vars(commonName),rows = vars(year)) +
+    xlab("Day Of Year") + ylab("% of Individuals") + xlim(0,366) +
+    ggtitle("Phenophase Density for Selected Site") +
+    theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20, hjust = 0.5)) +
+    theme(text = element_text(size = 15)) +
+   scale_color_brewer(palette = "Set1") + scale_fill_brewer(palette = "Set1") +
+    theme(legend.position = "bottom") + labs(fill = "Phenophase", color = "Phenophase")
   
   
   
