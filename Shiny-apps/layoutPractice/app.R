@@ -11,6 +11,8 @@ library(shiny)
 library(dplyr)
 library(ggplot2)
 library(shinyWidgets)
+library(gapminder)
+library(plotly)
 
 # reading the data into app
 # this dataframe will be used by both tabs, but it will be filtered in different ways for each of them
@@ -32,16 +34,16 @@ ui <- navbarPage(
            # has a checkbox menu for you to choose whichever NEON sites to display data for
             fluidRow(
               column(4,
-                helpText(h4(strong(span("Choose a year to observe AGDDs over and choose which sites you want to compare for that year.",
-                                     style = "color:darkblue")))),
+                helpText(h5(span("Choose a year to observe AGDDs over and choose which sites you want to compare for that year.",
+                                     style = "color:darkblue"))),
   
-                pickerInput("select", label = h3(span("Years", style = "color:darkblue")),
+                pickerInput("select", label = h4(span("Years", style = "color:darkblue")),
                             choices = list("2015"="2015", "2016"="2016","2017"="2017","2018"="2018", "2019"="2019") , choicesOpt = list(style =rep("font-weight:bold;",5) ), options=list(style = "btn-danger"))),
   
 
-                column(8,
+                column(7,
               prettyCheckboxGroup("checkGroup",
-                                   label = h3(span("NEON Sites", style = "color:darkblue")),
+                                   label = h4(span("NEON Sites", style = "color:darkblue")),
                                    choiceNames = list("Harvard Forest (HARV)", "Bartlett Experimental Forest (BART)", "Smithsonian Environmental Research Center (SERC)",
                                                   "University of Notre Dame Environmental Research Center (UNDE)", "The Universtiy of Kansas Field Station (UKFS)", "Oak Ridge (ORNL)" ,
                                                 "LBJ National Grassland (CLBJ)", "Abby Road (ABBY)", "Toolik Lake (TOOL)",
@@ -54,9 +56,9 @@ ui <- navbarPage(
   
 
   
-   ), hr(),  # Show a plot
+   , hr(),  # Show a plot
    mainPanel(
-     plotOutput("pathPlot")
+     plotOutput("pathPlot", width = "150%", height = "600px"))
  ),
 
   # this creates the second tab on the top, which is the agdd-years app
@@ -126,16 +128,39 @@ server <- function(input, output, session) {
     temp_select <- temp_data %>%
       filter(year %in% input$select) %>%
       filter(siteID %in% input$checkGroup)
-
-    # plot of AGDDs in 2017 for chosen sites as different colors
+    
     ggplot(data=temp_select, aes(x=dayOfYear, y=AGDD, color = siteID)) +
-      geom_path() + xlab("Day of Year") + ggtitle("Accumulated Growing Degree Days in Selected Year") +
+      geom_path(size=1.5) + xlab("Day of Year") + ggtitle("Accumulated Growing Degree Days in Selected Year") +
       scale_colour_manual(values = c("maroon1", "purple", "orange", "navyblue", "cyan",
                                      "brown", "darkcyan", "black", "springgreen1", "red")) + ylab("AGGDs") + ylim(c(0, 6500)) + xlim(c(0,365)) +
-      theme_bw() + theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20, hjust = 0.5),
-                         axis.title = element_text(lineheight = .5, size = 15),
-                         legend.title = element_text(lineheight = .5, size = 12))
+      theme_bw() + theme(plot.title = element_text(lineheight = .8, face = "bold", size = 30, hjust = 0.5),
+                         axis.title = element_text(lineheight = .8, size = 20, face = "bold"),
+                         legend.title = element_text(lineheight = .8, size = 20, face = "bold"),
+                         legend.text = element_text(size = 15), 
+                         axis.text = element_text(size = 15)
+      )
+
+    # plot of AGDDs in 2017 for chosen sites as different colors
+    # p <- ggplot(data=temp_select, aes(x=dayOfYear, y=AGDD, color = siteID)) +
+    #   geom_path(size=1.5) + xlab("Day of Year") + ggtitle("Accumulated Growing Degree Days in Selected Year") +
+    #   scale_colour_manual(values = c("maroon1", "purple", "orange", "navyblue", "cyan",
+    #                                  "brown", "darkcyan", "black", "springgreen1", "red")) + ylab("AGGDs") + ylim(c(0, 6500)) + xlim(c(0,365)) +
+    #   theme_bw() + theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20, hjust = 0.5),
+    #                      axis.title = element_text(lineheight = .8, size = 15, face = "bold"),
+    #                      legend.title = element_text(lineheight = .8, size = 15, face = "bold"),
+    #                      legend.text = element_text(size = 10), 
+    #                      axis.text = element_text(size = 10),
+    #                      legend.title.align = .5
+    #                      )
+    # ggplotly(p)
+    
+    
   })
+
+  # output$plot_hoverinfo <- renderPrint({
+  #   cat("Hover:\n")
+  #   str(input$plot_hover)
+  # })
 
   
   # this second observe and output is for the second tab

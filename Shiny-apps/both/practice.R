@@ -14,8 +14,8 @@ temp_data <- read.csv("years.csv", stringsAsFactors = FALSE)
 
 
 pheno <- DBL %>%
-  filter(siteID %in% "HARV") %>%
-  filter(year %in% c("2017"))
+  filter(siteID %in% "CLBJ") %>%
+  filter(year %in% c("2017", "2018"))
 
 # look at the total individuals in phenophase status by day
 phenoSamp <- pheno %>%
@@ -53,8 +53,8 @@ phenoP
 
 
 site_select <- temp_data %>%
-  filter(siteID %in% "HARV") %>%
-  filter(year %in% c("2017"))
+  filter(siteID %in% "CLBJ") %>%
+  filter(year %in% c("2017", "2018"))
 
 # plots the data with the different years as the different lines
 yearsP <- ggplot(data=site_select, aes(x=dayOfYear, y=AGDD, color = as.factor(year))) +
@@ -66,6 +66,10 @@ yearsP <- ggplot(data=site_select, aes(x=dayOfYear, y=AGDD, color = as.factor(ye
 yearsP
 
 grid.arrange(phenoP, yearsP)
+
+
+
+
 
 
 # using way of graphing from NEON website
@@ -109,7 +113,7 @@ pp <- c(subset(g1$layout, name == "panel", se=t:r))
 # error starting here
 g <- gtable_add_grob(g1, g2$grobs[[which(g2$layout$name=="panel")]],
                      pp$t,pp$l,pp$b,pp$l)
-ia <- which(g2$layout$name=="axis-1")
+ia <- which(g2$layout$name=="axis-l")
 ga <- g2$grobs[[ia]]
 ax <- ga$children[[2]]
 ax$widths <- rev(as$widths)
@@ -119,6 +123,9 @@ g <- gtable_add_cols(g, g2$widths[g2$layout[ia, ]$l], length(g$widths) - 1)
 g <- gtable_add_grob(g, ax, pp$t, length(g$widths) - 1, pp$b)
 
 grid.draw(g)
+
+
+
 
 
 
@@ -153,6 +160,11 @@ legend("topleft", legend = c("Phenophases", "AGDDs"),
        text.col = c("black", "red"), pch = c(16,15), col = c("black", "red"))
 
 
+
+
+
+
+
 # another way of combining the graphs
 # error: x and y must have the same number of columns, line 161
 # source: https://github.com/tidyverse/ggplot2/wiki/Align-two-plots-on-a-page
@@ -161,6 +173,11 @@ g1 <- gtable_add_cols(g1, unit(0, "mm"))
 g2 <- ggplotGrob(yearsP2)
 g <- rbind(g1, g2, size="first")
 g$widths <- unit.pmax(g1$widths, g2$widths)
+
+
+
+
+
 
 
 
@@ -177,6 +194,31 @@ ggplot() +
   theme(
     axis.title.y = element_text(color = "grey"),
     axis.title.y.right = element_text(color = "blue"))
-  
-  
+
+
+
+
+
+
+# source: https://rpubs.com/MarkusLoew/226759
+
+
+# phenoStat_T <- phenoStat_T %>%
+#   filter(commonName == "Red Maple")
+
+p<- ggplot(data=phenoStat_T, mapping=aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName)) +
+  geom_density(data=phenoStat_T,alpha=0.3,stat = "identity", position = position_dodge(width = .1)) +
+  #geom_density(alpha=0.3,stat = "identity", position = "stack") +  
+  theme_bw() + facet_grid(cols = vars(commonName),rows = vars(year), scale = "free_y") +
+  #xlab("Day Of Year") + ylab("% of Individuals") + xlim(0,366) +
+  #ggtitle("Phenophase Density for Selected Site") +
+  #theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20, hjust = 0.5)) +
+  #theme(text = element_text(size = 15)) +
+  scale_color_brewer(palette = "Set1") + scale_fill_brewer(palette = "Set1") +
+  theme(legend.position = "bottom") + labs(fill = "Phenophase", color = "Phenophase")
+p <- p+geom_path(data=site_select,aes(x=dayOfYear, y=AGDD/200), inherit.aes = FALSE, size = 1.5) 
+p <- p + scale_y_continuous(sec.axis = sec_axis(~.*200, name = "AGDDs"))
+p <- p + labs(x = "Day of Year", y = "Percentage of Individuals in Each Phenophase")
+p  
+
 

@@ -167,6 +167,51 @@ server <- function(input, output, session) {
 # if the user chooses to observe both phenophases and agdds, then this plot is generated 
     output$bothPlot <- renderPlot({
       
+      validate(
+        need(input$checkGroup != "", "Please select at least one year to plot.")
+      )
+      
+      pheno <- DBL %>%
+        filter(siteID %in% input$select) %>%
+        filter(year %in% input$checkGroup)
+      
+      # look at the total individuals in phenophase status by day
+      phenoSamp <- pheno %>%
+        group_by(siteID) %>%
+        count(date)
+      phenoStat <- pheno %>%
+        group_by(date, siteID, taxonID, phenophaseName, commonName) %>%
+        count(phenophaseStatus) 
+      phenoStat <- full_join(phenoSamp, phenoStat, by = c("date", "siteID"))
+      ungroup(phenoStat)
+      
+      # only look at the yes's
+      phenoStat_T <- filter(phenoStat, phenophaseStatus %in% "yes")
+      
+      # plot the percentage of individuals in the leaves phenophase
+      # convert to percentage
+      phenoStat_T$percent <- ((phenoStat_T$n.y)/phenoStat_T$n.x)*100
+      
+      phenoStat_T$dayOfYear <- yday(phenoStat_T$date)
+      phenoStat_T$year <- substr(phenoStat_T$date, 1, 4)
+      phenoStat_T$phenophaseName <- factor(phenoStat_T$phenophaseName, levels = c("Leaves", "Falling leaves", "Colored leaves",  "Increasing leaf size","Breaking leaf buds",  "Open flowers"))
+      
+      site_select <- temp_data %>%
+        filter(siteID %in% input$select) %>%
+        filter(year %in% input$checkGroup)
+      
+      ggplot(data=phenoStat_T, mapping=aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName)) +
+        geom_density(data=phenoStat_T,alpha=0.3,stat = "identity", position = position_dodge(width = .1)) +
+        #geom_density(alpha=0.3,stat = "identity", position = "stack") +  
+        theme_bw() + facet_grid(cols = vars(commonName),rows = vars(year), scale = "free_y") +
+        scale_color_brewer(palette = "Set1") + scale_fill_brewer(palette = "Set1") +
+        theme(legend.position = "bottom") + labs(fill = "Phenophase", color = "Phenophase") +
+        geom_path(data=site_select,aes(x=dayOfYear, y=AGDD/240), inherit.aes = FALSE, size = 1.5)+
+        scale_y_continuous(sec.axis = sec_axis(~.*240, name = "AGDDs")) +
+        labs(x = "Day of Year", y = "Percentage of Individuals in Each Phenophase") + ggtitle("Phenophases and AGDDs") +
+        theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20, hjust = 0.5)) +
+      theme(text = element_text(size = 15))
+      
       
       
       

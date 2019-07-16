@@ -99,17 +99,23 @@ server <- function(input, output, session) {
     phenoStat_T$year <- substr(phenoStat_T$date, 1, 4)
     phenoStat_T$phenophaseName <- factor(phenoStat_T$phenophaseName, levels = c("Leaves", "Falling leaves", "Colored leaves",  "Increasing leaf size","Breaking leaf buds",  "Open flowers"))
     
+    site_select <- temp_data %>%
+      filter(siteID %in% input$select) %>%
+      filter(year %in% input$checkGroup)
     
-    ggplot(phenoStat_T, aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName)) +
-      geom_density(alpha=0.3,stat = "identity", position = position_dodge(width = .1)) +
+    ggplot(data=phenoStat_T, mapping=aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName)) +
+      geom_density(data=phenoStat_T,alpha=0.3,stat = "identity", position = position_dodge(width = .1)) +
       #geom_density(alpha=0.3,stat = "identity", position = "stack") +  
       theme_bw() + facet_grid(cols = vars(commonName),rows = vars(year), scale = "free_y") +
-      xlab("Day Of Year") + ylab("% of Individuals") + xlim(0,366) +
-      ggtitle("Phenophase Density for Selected Site") +
-      theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20, hjust = 0.5)) +
-      theme(text = element_text(size = 15)) +
+      #xlab("Day Of Year") + ylab("% of Individuals") + xlim(0,366) +
+      #ggtitle("Phenophase Density for Selected Site") +
+      #theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20, hjust = 0.5)) +
+      #theme(text = element_text(size = 15)) +
       scale_color_brewer(palette = "Set1") + scale_fill_brewer(palette = "Set1") +
-      theme(legend.position = "bottom") + labs(fill = "Phenophase", color = "Phenophase")
+      theme(legend.position = "bottom") + labs(fill = "Phenophase", color = "Phenophase") +
+      geom_path(data=site_select,aes(x=dayOfYear, y=AGDD/240), inherit.aes = FALSE, size = 1.5)+
+      scale_y_continuous(sec.axis = sec_axis(~.*240, name = "AGDDs")) +
+      labs(x = "Day of Year", y = "Percentage of Individuals in Each Phenophase") 
     
     
     
