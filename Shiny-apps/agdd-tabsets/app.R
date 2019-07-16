@@ -26,7 +26,7 @@ ui <- navbarPage(
       # has a checkbox menu for you to choose whichever NEON sites to display data for
       sidebarLayout(
         sidebarPanel(
-          helpText("Choose a year to observe AGDDs over and choose which sites you want to compare for that year."),
+          helpText(strong(span("Choose a year to observe AGDDs over and choose which sites you want to compare for that year.", style = "color:d"))),
           selectInput("select", label = h3(span("Years", style = "color:darkblue")),
                       choices = list("2015"="2015", "2016"="2016","2017"="2017","2018"="2018", "2019"="2019")),
           # HARV is chosen as a default
@@ -55,7 +55,7 @@ ui <- navbarPage(
                    helpText("Choose a NEON site to observe AGDDS for and choose which years to compare for that site."),
                    # dropdown select menu
                    selectInput("select2", label = h3(span("NEON Sites", style = "color:darkblue")), choices = list("Harvard Forest (HARV)" = "HARV", "Bartlett Experimental Forest (BART)" = "BART", 
-                                                                                  "Smithsonian Environmental Research Center (SERC)" = "SERC", "University of Notre Dame Environmental Research Center (UNDE)" = "UNDE", 
+                                                                                  "Smithsonian Environmental Research Center (SERC)" = "SERC", "University of Notre Dame\nEnvironmental Research Center (UNDE)" = "UNDE", 
                                                                                   "The Universtiy of Kansas Field Station (UKFS)" = "UKFS", "Oak Ridge (ORNL)" = "ORNL",
                                                                                   "LBJ National Grassland (CLBJ)" = "CLBJ", "Abby Road (ABBY)" = "ABBY", "Toolik Lake (TOOL)" = "TOOL",
                                                                                   "Caribou Creek (BONA)" = "BONA"), selected = "HARV"),

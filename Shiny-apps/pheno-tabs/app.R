@@ -1,19 +1,21 @@
 # pheno-tabs
+# combines pheno-line and pheno-area apps
 
 library(shiny)
 library(dplyr)
 library(ggplot2)
 library(lubridate)
 
-# load the data
+# load the data, both use the same data
 DBL <- read.csv("DBL-tabs.csv", stringsAsFactors = FALSE)
 
 
-# Define UI for application that draws a histogram
+# Define UI for application 
 ui <- navbarPage(
-  
+  # title for the whole page
   strong(span("Phenophases", style = "color:darkblue")),
-  
+  # title for the first tab, the pheno-area app
+  # all the stuff for the pheno-area part
   tabPanel(span("Phenophases By Year", style = "color:darkblue"),
            
            sidebarLayout(
@@ -38,6 +40,7 @@ ui <- navbarPage(
            )
   ),
   
+  # all the stuff for the pheno-line tab and app
   tabPanel(span("Phenophases Across Sites", style = "color:darkblue"),
            sidebarLayout(
              sidebarPanel(
@@ -72,9 +75,10 @@ ui <- navbarPage(
 
 
 
-# Define server logic required to draw a histogram
+# Define server logic 
 server <- function(input, output, session) {
 
+  # all the stuff for the pheno-area part of the app
   observe({
     x <- input$select
     
@@ -84,7 +88,7 @@ server <- function(input, output, session) {
     if (x == "SERC" | x=="UKFS" | x=="ABBY")
       updateCheckboxGroupInput(session, "checkGroup", choices = list("2016"="2016", "2017" = "2017", "2018"="2018", "2019"="2019"))
     if (x=="CLBJ" | x=="TOOL")
-      updateCheckboxGroupInput(session, "checkGroup", choices = list("2017" = "2017", "2018"="2018", "2019"="2019"))
+      updateCheckboxGroupInput(session, "checkGroup", choices = list("2017" = "2017", "2018"="2018"))
     if (x=="BONA")
       updateCheckboxGroupInput(session, "checkGroup", choices = list( "2018"="2018", "2019"="2019"))
     
@@ -126,8 +130,8 @@ server <- function(input, output, session) {
     
     
     ggplot(phenoStat_T, aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName)) +
-      #geom_density(alpha=0.3,stat = "identity", position = position_dodge(width = .1)) +
-      geom_density(alpha=0.3,stat = "identity", position = "stack") +  
+      geom_density(alpha=0.3,stat = "identity", position = position_dodge(width = .1)) +
+      #geom_density(alpha=0.3,stat = "identity", position = "stack") +  
       theme_bw() + facet_grid(cols = vars(commonName),rows = vars(year), scale = "free_y") +
       xlab("Day Of Year") + ylab("% of Individuals") + xlim(0,366) +
       ggtitle("Phenophase Density for Selected Site") +
@@ -140,6 +144,7 @@ server <- function(input, output, session) {
     
   })
   
+# all the stuff for the pheno-line part of the app
   observe({
     # the year chosen
     y <- input$select2
