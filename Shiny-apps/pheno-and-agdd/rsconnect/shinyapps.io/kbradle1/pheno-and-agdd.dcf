@@ -5,6 +5,6 @@ account: kbradle1
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1035587
-bundleId: 2242269
+bundleId: 2248674
 url: https://kbradle1.shinyapps.io/pheno-and-agdd/
-when: 1563400268.56599
+when: 1563576317.90605
