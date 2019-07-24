@@ -27,6 +27,7 @@ years_data$GDD <- ifelse(years_data$dayMean-50 < 0, 0, round(years_data$dayMean-
 # adding useful columns to dataframe for date analysis
 years_data$dayOfYear <- yday(years_data$date)
 years_data$year <- substr(years_data$date, 1, 4)
+years_data$monthDay <- format.Date(years_data$date, format="%B %d")
 
 
 # ***** this was the original code, but when a new year began, it still added AGDDs instead of starting

@@ -36,7 +36,7 @@ DBL <- DBL %>%
   filter(taxonID != "BEGL/BENA")
 
 
-write.csv(DBL, file = "DBL-area.csv", row.names = FALSE)
+#write.csv(DBL, file = "DBL-area.csv", row.names = FALSE)
 
 pheno <- DBL %>%
   filter(siteID %in% "HARV") %>%
@@ -44,12 +44,12 @@ pheno <- DBL %>%
 
 # look at the total individuals in phenophase status by day
 phenoSamp <- pheno %>%
-  group_by(siteID) %>%
+  group_by(commonName, phenophaseName) %>%
   count(date)
 phenoStat <- pheno %>%
-  group_by(date, siteID, taxonID, phenophaseName, commonName) %>%
+  group_by(date,  phenophaseName, commonName) %>%
   count(phenophaseStatus) 
-phenoStat <- full_join(phenoSamp, phenoStat, by = c("date", "siteID"))
+phenoStat <- full_join(phenoSamp, phenoStat, by = c("date", "commonName", "phenophaseName"))
 ungroup(phenoStat)
 
 # only look at the yes's
@@ -65,7 +65,7 @@ phenoStat_T$year <- substr(phenoStat_T$date, 1, 4)
 phenoStat_T$phenophaseName <- factor(phenoStat_T$phenophaseName, levels = c("Leaves", "Falling leaves", "Colored leaves",  "Increasing leaf size","Breaking leaf buds",  "Open flowers"))
 
 
-ggplot(phenoStat_T, aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName)) +
-  geom_density(alpha=0.3,stat = "identity", position = "stack")+  theme_bw() +
+ggplot(phenoStat_T, aes(x = dayOfYear, y = n.y, fill = phenophaseName, color = phenophaseName)) +
+  geom_density(alpha=0.3,stat = "identity", position = position_dodge(width = .5))+  theme_bw() +
   facet_grid(cols = vars(commonName),rows = vars(year)) 
 
