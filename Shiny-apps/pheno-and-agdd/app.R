@@ -1,7 +1,7 @@
 # pheno-and-agdd
 # meadowlark-style with agdd on top
-# tried to make buttons that would plot only phenophases, only agdds, but not working with if statements
-# how to make the top panel shorter so that the graph can take up most of the room??
+
+
 
 library(shiny)
 library(shinyWidgets)
@@ -12,6 +12,8 @@ library(lubridate)
 library(neonUtilities)
 library(geoNEON)
 library(plotly)
+
+Sys.setenv('MAPBOX_TOKEN' = 'pk.eyJ1Ijoia2JyYWRsZTEiLCJhIjoiY2p5b3JrcG1yMDFvazNibzJ0bHMzcGdiayJ9.y4HFULDWOBCcT9hA6Pr9hg')
 
 
 # Define UI for application 
@@ -45,7 +47,7 @@ ui <-
 
          # can choose if you want to look at phenophases, AGDDs, or both using checkbox buttons
          prettyRadioButtons("option", label = h5(span("Choose what to observe", style = "color:darkblue")), choices = c("Phenophases" ="phenos","AGDDs"="agdd", "Phenophases & AGDDs"="both"),
-                             selected = "phenos", status = "danger", outline = TRUE, inline = TRUE)
+                             selected = NULL, status = "danger", outline = TRUE, inline = TRUE)
         ),
           column(4, style="margin-left:-30px; margin-bottom:-20px",
           # checkbox so can pick as many years that are available for that site as you want
@@ -57,7 +59,12 @@ ui <-
         column(1, style="margin-left:-50px; margin-top:15px; margin-bottom:-20px",
          
          # button to plot that you have to click again to refresh the graph
-          actionButton("goplot", label = span("PLOT", style = "color:darkblue")))
+          actionButton("goplot", label = span("PLOT", style = "color:darkblue"))),
+        
+        fluidRow(
+        column(1, style = "margin-top:-100px; margin-left:-175px",
+         prettyCheckboxGroup("info",label = "" , choices =  c("SEE APP INFO"="yes"),status = "danger", outline = TRUE, bigger = TRUE, thick = TRUE
+         )))
           
         ), hr(),
         
@@ -66,7 +73,9 @@ ui <-
         mainPanel(
           conditionalPanel(condition = "input.option == 'agdd'", plotlyOutput("yearsPlot", width = "150%", height = "500px")),
           conditionalPanel(condition = "input.option == 'phenos'", plotlyOutput("phenoPlot", width = "150%", height = "500px")),
-          conditionalPanel(condition = "input.option == 'both'", plotOutput("bothPlot", width = "150%", height = "500px"))
+          conditionalPanel(condition = "input.option == 'both'", plotOutput("bothPlot", width = "150%", height = "500px")),
+          conditionalPanel(condition = "input.info == 'yes'", htmlOutput("infoText", style = "margin-top:-470px; margin-right:-350px"), 
+                           plotlyOutput("map", width = "150%", height = "500px"))
         )
     )
 
@@ -90,33 +99,35 @@ server <- function(input, output, session) {
     })
 
 
-  checkedGroups <- eventReactive(input$goplot, {
-    yr <- input$checkGroup
-    sort(yr)})
+  checkedGroups <- eventReactive(input$goplot, {input$checkGroup})
   
   
 
 ##### if the user chooses to observe agdds, then this plot is generated
- # eventReactive(input$goplot, {
+  # eventReactive(input$goplot, {
+
  output$yearsPlot <- renderPlotly({
   # if they haven't chosen a year, this appears
+   
    validate(
      need(input$checkGroup != "", "Please select at least one year to plot.")
    )
 
-  
+  # making a progress bar
+   # updates whenever setProgress() is used with a different value
    withProgress(message = "Making plot", value = 0,{
      siteO <- input$select
-     yr <- input$checkGroup
+     yr <- checkedGroups()
      sort(yr)
      
      #eventReactive(input$goplot,{
      
      # loading the data from the API
      dpid2 <- as.character('DP1.00002.001') 
+     setProgress(value = 0.3, detail = "This may take a while...")
      agddLoad <- loadByProduct(dpID=dpid2, site=siteO, package="basic", check.size = FALSE, 
                                startdate = c(paste(checkedGroups()[1],"-01", sep = "")), enddate = c(paste(tail(checkedGroups(), n=1), "-12", sep = "")), avg = "30")
-  
+     setProgress(value = 0.8)
      SAAT <- agddLoad$SAAT_30min
      df <- SAAT
      
@@ -134,7 +145,7 @@ server <- function(input, output, session) {
      #pull date value from dateTime
      # pulls the first 10 indices from endDateTime (yyyy-mm-dd) and creates a new column with just the date
      df_2$date <- substr(df_2$endDateTime, 1, 10)
-     
+     setProgress(value = 0.9)
      years_data <- df_2%>%
        group_by(date, siteID)%>%
        arrange(date) %>% # had to add this so that the dates were in order
@@ -202,6 +213,7 @@ server <- function(input, output, session) {
               axis.text = element_text(size = 5)) + labs(color="")
      
      # this part allows user to hover over graph and see different values
+     
      ggplotly(p, tooltip = c("text")) %>% config(displayModeBar = FALSE) %>% 
        layout(legend=list(x=100,y=.5, text = "Year", yanchor="top"), xaxis=x, yaxis=y) %>% layout(legend = l) %>% 
        add_annotations(text="Year", xref="paper", yref="paper",x=1.02, xanchor="left",y=0.5, yanchor="bottom",legendtitle=TRUE, showarrow=FALSE) 
@@ -224,6 +236,10 @@ server <- function(input, output, session) {
       need(input$checkGroup != "", "Please select at least one year to plot.")
     )
    
+   # making a progress bar
+   # updates whenever setProgress() is used with a different value
+   withProgress(message = "Making plot", value = 0, {
+     
    siteO <- input$select
    yr <- input$checkGroup
    sort(yr)
@@ -231,10 +247,12 @@ server <- function(input, output, session) {
    # loading data from API
    dpid <- as.character('DP1.10055.001')
    
+   setProgress(value = 0.3, detail = "This may take a while...")
   # observeEvent(input$goplot,{
    phenoLoad <- loadByProduct(dpID=dpid, site=siteO, package="basic", check.size = FALSE, 
                               startdate = c(paste(checkedGroups()[1],"-01", sep = "")), enddate = c(paste(tail(checkedGroups(), n=1), "-12", sep = "")))
    
+   setProgress(value = 0.8)
    # cleaning the data:
    ind <- phenoLoad$phe_perindividual
    status <- phenoLoad$phe_statusintensity
@@ -278,6 +296,7 @@ server <- function(input, output, session) {
    phe_ind <- select(phe_ind, -measuredByStat, -recordedByStat, -sampleGeodeticDatum, -samplingProtocolVersion,
                      -measuredBy, -identifiedBy, -recordedBy)
    
+   setProgress(value = 0.9)
    # adding other date columns for better date analysis
    phe_ind$year <- substr(phe_ind$date, 1, 4)
    
@@ -385,7 +404,7 @@ server <- function(input, output, session) {
    gp[['x']][['layout']][['annotations']][[1]][['y']] <- -0.05
    gp %>% layout(margin = list(l = 75)) %>% layout(margin = list(t = 75))
    
- })
+ })})
  #})
     
  
@@ -404,15 +423,21 @@ server <- function(input, output, session) {
       
       #eventReactive(input$goplot,{
       
+      # making a progress bar
+      # updates whenever setProgress() is used with a different value
+      withProgress(message = "Making plot", value = 0, {
+      
       siteO <- input$select
       yr <- input$checkGroup
       sort(yr)
       
       # loading phenology data from API
       dpid <- as.character('DP1.10055.001')
+      
+      setProgress(value = 0.1, detail = "This may take a while...")
       phenoLoad <- loadByProduct(dpID=dpid, site=siteO, package="basic", check.size = FALSE, 
                                  startdate = c(paste(checkedGroups()[1],"-01", sep = "")), enddate = c(paste(tail(checkedGroups(), n=1), "-12", sep = "")))
-      
+      setProgress(value = 0.3)
       # cleaning phenology data:
       ind <- phenoLoad$phe_perindividual
       status <- phenoLoad$phe_statusintensity
@@ -493,7 +518,7 @@ server <- function(input, output, session) {
                                           ifelse(taxonID %in% "COCOC", "California Hazelnut",
                                           ifelse(taxonID %in% "BEGL", "Resin Birch", "other")))))))))))))))))))
       
-      
+      setProgress(value = 0.4)
       # only look at the yes's
       pheno <- filter(pheno, phenophaseStatus %in% "yes")
       
@@ -524,11 +549,13 @@ server <- function(input, output, session) {
       
       # loading the air temp data
       dpid2 <- as.character('DP1.00002.001') 
+      setProgress(value = 0.5)
       agddLoad <- loadByProduct(dpID=dpid2, site=siteO, package="basic", check.size = FALSE, 
                                 startdate = c(paste(checkedGroups()[1],"-01", sep = "")), enddate = c(paste(tail(checkedGroups(), n=1), "-12", sep = "")), avg = "30")
       SAAT <- agddLoad$SAAT_30min
       df <- SAAT
       
+      setProgress(value = 0.8)
       # cleaning air temp data:
       # define function to convert temp c to f 
       c_to_f <- function(x)  (x * 1.8 + 32)
@@ -568,7 +595,7 @@ server <- function(input, output, session) {
       years_data <- data.table(years_data)
       years_data[, AGDD := cumsum(GDD), by=list(year, siteID)]
       
-      
+      setProgress(value = 0.9)
       
       # filtering the data based on user input
       site_select <- years_data %>%
@@ -611,18 +638,67 @@ server <- function(input, output, session) {
               strip.text.x = element_text(size = 10), strip.text.y = element_text(size = 10),
               axis.title.y.right = element_text(color = "blue"), 
               axis.text.y.right = element_text(color = "blue"))
-      
-      
-      # ggplotly(p, tooltip = "text") %>% config(displayModeBar = FALSE) %>% 
-      #   layout(legend=list(x=.25,y=-.4, text = "Phenophase", yanchor="left")) %>% layout(legend = l) %>% 
-      #   add_annotations(text="Phenophase", xref="paper", yref="paper",x=.5, xanchor="top",y=-.3, yanchor="bottom",legendtitle=TRUE, showarrow=FALSE) %>%
-      #   add_lines(data = site_select, x=~dayOfYear, y=~AGDD, yaxis="y2", showlegend =FALSE, inherit = FALSE) %>% 
-      #   layout(yaxis2=ay)
-      
 
- 
-      
   #  }) 
+    })})
+    
+    
+    
+    
+    ### if the user chooses to view the app info, this is run
+    # includes creator, date published, definitions, agdd calculation info, and phenophase descriptions
+    output$infoText<- renderUI({
+      s1 <- h4(span("Creator: Karlee Bradley", style = "color:darkblue"))
+      s2 <- h4(span("Date Published: July 29, 2019", style = "color:darkblue"))
+      s3 <- "</br>"
+      s4 <- h4("Definitions:")
+      s5 <- p(strong("Phenology:"),"the study of cyclic and seasonal natural phenomena, especially in relation to climate and plant and animal life")
+      s6 <- p(strong("Plant Phenology:"),"the transition of plants through phenophases, or observable stages of their life cycle that have a defined starting and ending point")
+      s7 <- p(strong("Growing Degree Days (GDDs):"),"the number of degrees the average daily temperature exceeds the temperature below which the organism will remain developmentally inactive")
+      s8 <- p(strong("Accumulated Growing Degree Days (AGDDs):"), "the annual accumulation of heat, calculated using daily temperature data")
+      s9 <- "</br>"
+      s10 <- h4("AGDD Calculation Information:")
+      s11 <- p(strong("Base Temperature:"),"50˚F")
+      s12 <- p(strong("Method:"),"Temperature Averaging")
+      s13 <- "</br>"
+      s14 <- h4("Phenophase Descriptions:")
+      s15 <- p(strong("Breaking leaf buds:"),"One or more breaking leaf buds are visible on the plant. A leaf bud is considered", em("breaking"),"once a green leaf tip is visible at the end of the bud, but before the first leaf from the bud has unfolded to expose the leaf stalk (petiole) or leaf base.")
+      s16 <- p(strong("Increasing leaf size:"), "A majority of leaves on the plant have not yet reached their full size and are still growing larger.")
+      s17 <- p(strong("Leaves:"),"One or more live, unfolded leaves are visible on the plant. A leaf is considered", em("unfolded"), "once its entire length has emerged from the breaking bud, stem node or growing stem tip, so that the leaf stalk (petiole) or leaf base is visible at its point of attachment to the stem.")
+      s18 <- p(strong("Open flowers:"), "One or more open, fresh flowers are visible on the plant. Flowers are considered", em("open"), "when the reproductive parts (male stamens or female pistils) are visible between or within unfolded or open flower parts (petals, floral tubes, or sepals).")
+      s19 <- p(strong("Colored leaves:"), "One or more leaves show some of their typical late-season or drought-induced color. ")
+      s20 <- p(strong("Falling leaves:"), "One or more leaves are falling or have recently fallen from the plant.")
+      s21 <- "</br>"
+      s22 <- h4("NEON Field Site Map:")
+      HTML(paste(s1, s2,s3, s4,s5,s6, s7,s8,s9, s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22, sep = ''))
+      })
+    
+    output$map <- renderPlotly({
+      
+      field_sites <- read.csv(file = "field-sites.csv", stringsAsFactors = FALSE)
+      
+      sites <- c("HARV", "SERC", "UNDE", "BONA", "BART", "UKFS", "ORNL", "CLBJ","ABBY", "TOOL")
+      
+      field_sites <- field_sites %>%
+        group_by(Site.ID) %>%
+        filter(Site.ID %in% sites)
+      
+      map <- field_sites %>%
+        plot_mapbox(lat = ~Latitude, lon = ~Longitude, split = ~Site.ID, text = ~Site.Name,  size = 3, color = I("magenta"),
+                    mode = "scattermapbox", hoverinfo = "text") %>%
+        config(displayModeBar = FALSE) %>%
+        layout(title = 'NEON Field Sites with Deciduous Broadleaf Trees',
+               font = list(color='black'),
+               plot_bgcolor = 'white', paper_bgcolor = 'white',
+               mapbox = list(style = 'satellite-streets', center = list(lat = 50,
+                                                                        lon =-110), 
+                             zoom = 1.7),
+               legend = list(orientation = 'h',
+                             font = list(size = 8)),
+               margin = list(l = 0, r = 0,
+                             b = 0, t = 25,
+                             pad = 0), showlegend = FALSE, hoverlabel = list(bgcolor = "white", font = list(color = "black"), bordercolor = "magenta"))
+      map
     })
 
 }
