@@ -1,0 +1,421 @@
+---
+title: "Repeat"
+author: "Karlee Bradley"
+date: "6/26/2019"
+output: html_document
+---
+
+This is a dummy R Markdown file for trying out repeating the code to work for all the sites instead of writing new code.
+
+## Plant Phenology Data
+
+#### Setting Up
+
+```{r library}
+
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(neonUtilities)
+library(devtools)
+library(geoNEON)
+library(gridExtra)
+library(tidyverse)
+library(gtools)
+library(httr)
+library(jsonlite)
+library(RColorBrewer)
+
+# set working directory
+setwd("~/Documents/data-for-proj")
+
+# setting file paths for where the data will be and where my repo is 
+#if (file.exists(
+  #'C:/Users/kbradlee')){
+  myPathToGit <- "C:/Users/kbradlee/Desktop/data-visualization"
+  myPathToData <- "/Users/kbradlee/Desktop/data-visualization"
+#}
+
+```
+
+#### Here, I pull the Plant Phenology Data from the NEON API and read it. I read in all of the phenology data rather than just doing it one site at a time.
+
+This is fine on its own because I'm not repeating anything since the data for all the sites is being downloaded.
+
+```{r pull-data}
+
+# pull plant phenology data via api instead of on local directory
+dpid <- as.character('DP1.10055.001')
+#zipsByProduct(dpID=dpid, site="all", package="basic")
+#stackByTable(paste0(getwd(), "/filesToStack10055"), folder=T)
+
+
+# read in the data
+ind <- read.csv(paste(myPathToData, "filesToStack10055/stackedFiles/phe_perindividual.csv", sep = "/"),  header = T)
+status <- read.csv(paste(myPathToData, "filesToStack10055/stackedFiles/phe_statusintensity.csv", sep = "/"), header = T)
+
+```
+
+#### Here I begin to clean the data.
+
+This also doesn't need to be repeated since the cleaning is only happening once.
+
+```{r clean-data}
+
+# remove the uid columns for both the ind and the status data
+ind <- select(ind, -uid)
+status <- select(status, -uid)
+
+# remove duplicate rows in the ind data and the status data
+ind_noD <- distinct(ind)
+status_noD <- distinct(status)
+
+# rename variables in the status object to have "Stat" at the end of the variable name before joining the datasets
+status_noD <- rename(status_noD, editedDateStat = editedDate, measuredByStat = measuredBy, recordedByStat = recordedBy,
+                   samplingProtocolVersionStat = samplingProtocolVersion, remarksStat = remarks, dataQFStat = dataQF)
+
+# rename variables in ind so that it doesn't conflict later on when joining the dataframes
+ind_noD <- rename(ind_noD, addDate = date)
+
+# convert the date columns from character class to date class for ind and status
+ind_noD$editedDate <- as.Date(ind_noD$editedDate)
+status_noD$date <- as.Date(status_noD$date)
+
+# retain only the latest editedDate for each individualID on ind and get rid of duplicate dates
+ind_lastnoD <- ind_noD %>%
+  group_by(individualID) %>%
+  filter(editedDate == max(editedDate)) %>%
+  group_by(editedDate, individualID) %>%
+  filter(row_number() == 1)
+
+```
+
+#### Join the two data frames together into one dataframe that contains the phenology data for all the sites.
+
+```{r join-data}
+
+# join the two dataframes together into one table
+# this will be the table that is used to then narrow sites and species and phenophases
+phe_ind <- left_join(status_noD, ind_lastnoD)
+
+# removing columns with mostly NAs that aren't needed
+phe_ind <- select(phe_ind, -dayOfYear, -samplingProtocolVersionStat, -remarksStat, -dataQFStat)
+phe_ind <- select(phe_ind, -geodeticDatum, -coordinateUncertainty, -elevationUncertainty, -elevationUncertainty, -sampleLatitude, 
+                  -sampleLongitude, -sampleCoordinateUncertainty, -sampleElevation, -sampleElevationUncertainty, 
+                  -identificationQualifier, -vstTag, -dataQF)
+# removing other columns that don't seem to be relevant
+phe_ind <- select(phe_ind, -measuredByStat, -recordedByStat, -sampleGeodeticDatum, -samplingProtocolVersion,
+                  -measuredBy, -identifiedBy, -recordedBy)
+
+# adding other date columns for better date analysis
+phe_ind$dayOfYear <- yday(phe_ind$date)
+phe_ind$year <- substr(phe_ind$date, 1, 4)
+phe_ind$monthDay <- format(phe_ind$date, format = "%m-%d")
+
+# using geoNEON package to find locations
+# adding latitude and longitude from geoNEON to phe_ind, and elevation
+spatialOnly <- def.extr.geo.os(phe_ind, 'namedLocation', locOnly = T)
+phe_ind$latitude <- spatialOnly$api.decimalLatitude[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
+phe_ind$longitude <- spatialOnly$api.decimalLongitude[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
+phe_ind$elevation <- spatialOnly$api.elevation[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
+
+```
+
+## AGDDs
+
+Here is where I will start having to repeat things to download the temp data from all the sites and then maybe combine it to one dataframe?
+
+#### Pulling the temperature data from the NEON API and reading it.
+
+The zipsByProduct and stackByTable have to be uncommented and this chunk has to run by itself. Then comment again and can knit. The temperature data from the specified sites is pulled and read in the table now.
+
+```{r pull-temp-data}
+
+# pulling the air temp data via api
+dpid <- as.character('DP1.00002.001')  ##single aspirated air temperature
+sites <- c("HARV", "SERC", "UNDE", "UKFS", "ORNL", "CLBJ", "ABBY", "TOOL", "BONA")
+
+
+#zipsByProduct(dpID=dpid, site=sites, package="basic", avg = "30")
+#stackByTable(paste0(myPathToData, "/filesToStack00002"), folder=T)
+
+
+
+# load the temp data
+SAAT <- read.csv(paste(myPathToData, "filesToStack00002/stackedFiles/SAAT_30min.csv", sep="/"), 
+                 stringsAsFactors = F, header = T)
+df <- SAAT
+
+```
+
+#### Formatting the data.
+
+```{r format-data}
+
+# define function to convert temp c to f 
+c_to_f <- function(x)  (x * 1.8 + 32)
+
+
+# remove NAs
+df <- filter(df, !is.na(tempSingleMean))
+
+# convert df mean temps from c to f
+df$meanTempF <- c_to_f(df$tempSingleMean)
+
+
+#pull date value from dateTime
+# pulls the first 10 indices from endDateTime (yyyy-mm-dd) and creates a new column with just the date
+df$date <- substr(df$endDateTime, 1, 10)
+
+#create new dataframe with daily values
+# groups by date, and for each date, it takes the max mean and makes that the max, the min mean and makes that the min, and the
+# mean mean and makes that the mean
+day_temp <- df%>%
+  group_by(date, siteID)%>%
+  filter(year(date)=="2017") %>% # added the year here so that AGDDs starts from beginning of year
+  arrange(date) %>% # had to add this so that the dates were in order
+  select(siteID, date, verticalPosition, meanTempF)%>%
+  mutate(dayMax=max(meanTempF), dayMin=min(meanTempF), dayMean=mean(meanTempF))%>% 
+  select(siteID, date, dayMax, dayMin, dayMean)%>%
+  distinct() # only keeps one row for each date with the max, min, and mean
+
+
+##alt mean, consistent with GDD calculations 
+### would be interesting to see how different the accumulation curves looks for true mean vs. simplified mean
+# takes the min mean and max mean and uses them to find mean2 by averaging them
+day_temp$mean2 <- (day_temp$dayMin + day_temp$dayMax)/2
+
+```
+
+
+### Calculating Growing Degree Days.
+
+```{r GDDs}
+
+#caluculate daily GDD
+# base temp is 50F
+# if mean2-50<0, then the number of GDDs is 0
+# if mean2-50>0, then it rounds the value to the nearest whole number, and that's the number of GDDs for that date
+day_temp$GDD <- ifelse(day_temp$mean2-50 < 0, 0, round(day_temp$mean2-50, 0))
+
+
+#function to add daily GDD values
+sumr.2 <- function(x) {
+  sapply(1:length(x), function(i) sum(x[1:i]))
+}
+
+```
+
+### Calculating AGDDs using the mean temperatures.
+
+```{r AGDD-mean}
+
+#calculate Accumlated GDD
+# uses the sumr.2 function to add the GDDs together and puts it in AGDD
+# uses the sumr.2 function to add the GDDs for each site
+day_temp <- day_temp %>%
+  group_by(siteID) %>%
+  mutate(AGDD = sumr.2(x=GDD))
+
+day_temp <- ungroup(day_temp)
+
+# adding useful columns to dataframe for date analysis
+day_temp$dayOfYear <- yday(day_temp$date)
+day_temp$year <- substr(day_temp$date, 1, 4)
+day_temp$monthDay <- format(day_temp$date, format = "%m-%d")
+
+```
+
+### Calculating AGDDs using the minimum and maximum temperatures.
+
+Wondered how much the AGDDs would change if calculated this way. This follows the same code as before for a different dataframe. Now calculates AGDDs for each site.
+
+```{r AGDD-min-max}
+
+df_2 <- filter(SAAT, !is.na(tempSingleMinimum), !is.na(tempSingleMaximum))
+
+# convert df min temps and max temps from c to f
+df_2$minTempF <- c_to_f(df_2$tempSingleMinimum)
+df_2$maxTempF <- c_to_f(df_2$tempSingleMaximum)
+
+#pull date value from dateTime
+# pulls the first 10 indices from endDateTime (yyyy-mm-dd) and creates a new column with just the date
+df_2$date <- substr(df_2$endDateTime, 1, 10)
+
+
+#create new dataframe with daily values
+# groups by date, and for each date, it takes the max mean and makes that the max, the min mean and makes that the min, and the
+# mean mean and makes that the mean
+day_temp_2 <- df_2%>%
+  group_by(date, siteID)%>%
+  filter(year(date)=="2017") %>% # added the year here so that AGDDs starts from beginning of year
+  arrange(date) %>% # had to add this so that the dates were in order
+  select(siteID, date, verticalPosition, minTempF, maxTempF) %>%
+  mutate(dayMax=max(maxTempF), dayMin=min(minTempF)) %>% 
+  select(siteID, date, dayMax, dayMin)%>%
+  distinct() # only keeps one row for each date with the max, min, and mean
+
+
+# calculating the mean for max and mins of each day
+day_temp_2$dayMean <- (day_temp_2$dayMax + day_temp_2$dayMin)/2
+
+
+#caluculate daily GDD
+# base temp is 50F
+# if mean2-50<0, then the number of GDDs is 0
+# if mean2-50>0, then it rounds the value to the nearest whole number, and that's the number of GDDs for that date
+day_temp_2$GDD <- ifelse(day_temp_2$dayMean-50 < 0, 0, round(day_temp_2$dayMean-50, 0))
+
+#calculate Accumlated GDD
+# uses the sumr.2 function to add the GDDs together and puts it in AGDD
+day_temp_2 <- day_temp_2 %>%
+  group_by(siteID) %>%
+  mutate(AGDD = sumr.2(x=GDD))
+
+
+day_temp_2 <- ungroup(day_temp_2)
+
+# adding useful columns to dataframe for date analysis
+day_temp_2$dayOfYear <- yday(day_temp_2$date)
+day_temp_2$year <- substr(day_temp_2$date, 1, 4)
+day_temp_2$monthDay <- format(day_temp_2$date, format = "%m-%d")
+
+```
+
+#### AGDD Plots
+
+Plotting AGDDs for all the sites in 2017 using the first method of calculating AGDDs from the mean temperatures.
+
+```{r AGDD-mean-plot}
+
+# plotting AGDDs for 2017 
+AGDD_2017 <- ggplot(data=day_temp, aes(x=dayOfYear, y=AGDD,  color=siteID)) +
+  geom_path() + xlab("Day of Year") + ggtitle("Aggregated Growing Degree Days in 2017") +
+  scale_color_brewer(palette = "Paired")
+AGDD_2017
+
+```
+
+Plotting AGDDs for 2017 using the second method of calculating AGDDs from the minimum and maximum temperatures.
+Comparing the two different ways to calculate the AGDDS, it looks like there are more AGDDS using the second calculation.
+
+```{r AGDD-min-max-plot}
+
+AGDD_2017_2 <- ggplot(data=day_temp_2, aes(x=dayOfYear, y=AGDD, color = siteID)) +
+  geom_path() + xlab("Day of Year") + ggtitle("Aggregated Growing Degree Days in 2017") +
+  scale_color_brewer(palette = "Paired")
+AGDD_2017_2
+
+```
+
+
+Filtering all of phe_ind for all sites.
+
+```{r }
+
+growthFormOfInterest <- "Deciduous broadleaf"
+phe_ind <- filter(phe_ind, growthForm %in% growthFormOfInterest)
+  
+phenophaseOfInterest <- "Leaves"
+phe_ind <- filter(phe_ind, phenophaseName %in% phenophaseOfInterest)
+
+phe_ind <- filter(phe_ind, siteID %in% sites)
+
+# look at the total individuals in leaves status by day
+sampSize <- count(phe_ind, date)
+inStat <- phe_ind %>%
+  group_by(date, taxonID, siteID) %>%
+  count(phenophaseStatus) 
+inStat <- full_join(sampSize, inStat, by = "date")
+
+ungroup(inStat)
+
+# only look at the yes's
+inStat_T <- filter(inStat, phenophaseStatus %in% "yes")
+
+
+
+```
+
+### all plots
+
+#### Total Individuals in Leaf
+
+```{r individuals}
+
+# plot of the number of individuals in the leaves phenophase
+phenoPlot <- ggplot(inStat_T, aes(date, n.y, color = siteID)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Total Individuals in Leaf") +
+  xlab("Date") + ylab("Number of Individuals") +
+  theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
+  theme(text = element_text(size = 18)) +
+  scale_color_brewer(palette = "Set1")
+phenoPlot
+
+```
+
+#### Percentage in Leaf
+
+```{r percentage}
+
+# plot the percentage of individuals in the leaves phenophase
+# convert to percentage
+inStat_T$percent <- ((inStat_T$n.y)/inStat_T$n.x)*100
+
+# plot
+phenoPlot_P <- ggplot(inStat_T, aes(date, percent, color = siteID)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Percentage in the Leaves Phenophase") +
+  xlab("Date") + ylab("% of Individuals") +
+  theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
+  theme(text = element_text(size = 18))
+phenoPlot_P
+
+```
+
+#### Percentage in Leaf in 2017
+
+```{r 2017-p}
+
+# plot percentage in just 2017
+startTime <- as.Date("2017-01-01")
+endTime <- as.Date("2017-12-31")
+start.end <- c(startTime, endTime)
+# plot
+leaves17 <- ggplot(inStat_T, aes(date, percent, color = siteID)) +
+  geom_bar(stat = "identity", na.rm = TRUE) +
+  ggtitle("Total Individuals in Leaf in 2017") +
+  xlab("Date") + ylab("% of Individuals") +
+  (scale_x_date(limits = start.end, date_breaks = "1 month", date_labels = "%b")) +
+  theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
+  theme(text = element_text(size = 18)) +
+  scale_color_brewer(palette = "Set1")
+leaves17
+
+```
+
+#### Percentage in Leaf in 2016
+
+```{r 2016-p}
+
+# plot percentage in just 2016
+startTime16 <- as.Date("2016-01-01")
+endTime16 <- as.Date("2016-12-31")
+start16.end16 <- c(startTime16, endTime16)
+#plot
+leaves16 <- ggplot(inStat_T, aes(date, percent, color = siteID)) +
+  geom_bar(stat = "identity", na.rm = TRUE) +
+  ggtitle("Total Individuals in Leaf in 2016") +
+  xlab("Date") + ylab("% of Individuals") +
+  (scale_x_date(limits = start16.end16, date_breaks = "1 month", date_labels = "%b")) +
+  theme(plot.title = element_text(lineheight = .8, face = "bold", size = 20)) +
+  theme(text = element_text(size = 18)) + 
+  scale_color_brewer(palette = "Set1")
+leaves16
+
+```
+
+
+
+

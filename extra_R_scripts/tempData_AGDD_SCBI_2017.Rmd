@@ -1,0 +1,111 @@
+
+
+```{r libraries, include=FALSE}
+
+##load libraries
+
+library(tidyverse)
+library(gtools)
+library(httr)
+library(jsonlite)
+library(neonUtilities)
+
+## set file paths
+
+if (file.exists(
+  'C:/Users/kjones')){
+  myPathToGit <- "C:/Users/kjones/Documents/GitHub/KB_project/data-visualization"
+  myPathToData <- "'C:/Users/kjones/Documents/R"
+}
+
+
+```
+
+
+
+```{r pull ALL temp data via api}
+
+dpid <- as.character('DP1.00002.001')  ##single aspirated air temperature
+
+#dpid <- as.character('DP1.10055.001')  ## phenology data
+
+zipsByProduct(dpID=dpid, site="SCBI", package="basic")
+
+### warning, stacking takes a long time!!!  ####
+
+stackByTable(paste0(myPathToData, "/filesToStack00002"), folder=T) # temp data
+
+# stackByTable(paste0(getwd(), "/filesToStack10055"), folder=T)  #phe data
+
+```
+
+
+```{r load temp data}
+
+SAAT <- read.csv(paste(myPathToData, "filesToStack00002/stackedFiles/SAAT_30min.csv", sep="/"), 
+                 stringsAsFactors = F, header = T)
+
+df <- SAAT
+
+
+```
+
+
+```{r format data}
+
+# define function to convert temp c to f 
+c_to_f <- function(x)  (x * 1.8 + 32)
+
+# remove NAs
+df <- filter(df, !is.na(tempSingleMean))
+
+# convert df temps
+df$meanTempF <- c_to_f(df$tempSingleMean)
+
+#pull date value from dateTime
+df$date <- substr(df$endDateTime, 1, 10)
+
+#create new dataframe with daily values
+day_temp <- df%>%
+  group_by(date)%>%
+  select(siteID, date, verticalPosition, meanTempF)%>%
+  mutate(dayMax=max(meanTempF), dayMin=min(meanTempF), dayMean=mean(meanTempF))%>%
+  select(siteID, date, dayMax, dayMin, dayMean)%>%
+  distinct()
+
+##alt mean, consistent with GDD calculations 
+### would be interesting to see how different the accumulation curves looks for true mean vs. simplified mean
+day_temp$mean2 <- (day_temp$dayMin + day_temp$dayMax)/2
+
+#caluculate daily GDD
+day_temp$GDD <- ifelse(day_temp$mean2-50 < 0, 0, round(day_temp$mean2-50, 0))
+
+#function to add daily GDD values
+sumr.2 <- function(x) {
+	sapply(1:length(x), function(i) sum(x[1:i]))
+}
+
+#calculate Accumlated GDD
+day_temp$AGDD <- sumr.2(x=day_temp$GDD)
+
+day_temp <- ungroup(day_temp)
+
+```
+
+
+```{r plot AGDD data}
+
+# define year of interest
+year <- 2017
+
+# subset data to specified year
+data <- filter(day_temp, date >= paste(year, '01-01', sep='-') & date <= paste(year, '12-31', sep='-'))
+
+#plot it
+ggplot(data=data, aes(x=date, y=AGDD, group=1)) +
+  geom_path()
+
+## some of this will require investigation, curve doesn't quite look right
+
+
+```
