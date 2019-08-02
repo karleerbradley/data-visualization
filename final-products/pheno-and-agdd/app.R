@@ -78,9 +78,9 @@ ui <-
 
   # depending on what the user chooses to observe, the following plots are made
         mainPanel(
-          conditionalPanel(condition = "input.observeOption == 'agdd'", plotlyOutput("yearsPlot", width = "150%", height = "500px")),
+          conditionalPanel(condition = "input.observeOption == 'agdd'", plotlyOutput("agddPlot", width = "150%", height = "500px")),
           conditionalPanel(condition = "input.observeOption == 'phenos'", plotlyOutput("phenoPlot", width = "150%", height = "500px")),
-          conditionalPanel(condition = "input.observeOption == 'both'", plotOutput("bothPlot", width = "150%", height = "500px")),
+          conditionalPanel(condition = "input.observeOption == 'both'", plotOutput("phenoAGDDPlot", width = "150%", height = "500px")),
           conditionalPanel(condition = "input.info == 'yes'", withMathJax(htmlOutput("infoText", style = "margin-top:-470px; margin-right:-350px")), 
                            plotlyOutput("map", width = "150%", height = "500px"))
         )
@@ -113,7 +113,7 @@ server <- function(input, output, session) {
 ##### if the user chooses to observe agdds, then this plot is generated
   # eventReactive(input$goplot, {
 
- output$yearsPlot <- renderPlotly({
+ output$agddPlot <- renderPlotly({
   # if they haven't chosen a year, this appears
    
    validate(
@@ -450,7 +450,7 @@ server <- function(input, output, session) {
  
  
 # if the user chooses to observe both phenophases and agdds, then this plot is generated 
-    output$bothPlot <- renderPlot({
+    output$phenoAGDDPlot <- renderPlot({
       # prints until user selects a year
       validate(
         need(input$checkYears != "", "Please select at least one year to plot.")
