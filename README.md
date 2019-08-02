@@ -1,7 +1,7 @@
 # data-visualization
 
 This repository was used during my internship at NEON during the summer of 2019. Within this repo are all of the R files I used to practice working with NEON data, the shiny apps that I practiced with, and my final products: 
-**pheno-and-agdd** within the Shiny-apps folder and **NEONDataStory_PhenologyAGDD_final.docx** within the data-story-drafts folder.
+**pheno-and-agdd** and **NEONDataStory_PhenologyAGDD_final.docx**, both within the final-products directory.
 
 # pheno-and-agdd
 
