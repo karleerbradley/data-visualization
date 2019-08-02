@@ -63,7 +63,7 @@ ui <-
          # button to plot that you have to click again to refresh the graph
           actionButton("goplot", label = span("PLOT", style = "color:darkblue")),
          
-         downloadButton("downloadData", "Download Cleaned Dataset")),
+         downloadButton("downloadData", "Download Plotted Data")),
         
       
         
@@ -712,10 +712,6 @@ server <- function(input, output, session) {
       s1.1 <- p("GitHub account: kbradle1")
       s1.2 <- p("Email: karleerbradley@gmail.com")
       s2 <- h4(span("Date Published: August 2, 2019", style = "color:darkblue"))
-   # would change once on NEON server
-      s2.1 <- h5(span("Link to shiny app:", style = "color:darkblue"), a("https://kbradle1.shinyapps.io/pheno-and-agdd/"))
-   # below is the option to add the link to the data story once published on the blog, would have to add s2.2 to paste function below
-      #s2.2 <- h5(span("Link to associated data story:", style = "color:darkblue"), a())
       s3 <- "</br>"
       s4 <- h4("Definitions:")
       s5 <- p(strong("Phenology:"),"the study of cyclic and seasonal natural phenomena, especially in relation to climate and plant and animal life")
@@ -736,8 +732,12 @@ server <- function(input, output, session) {
       s20 <- p(strong("Falling leaves:"), "One or more leaves are falling or have recently fallen from the plant.")
       s21 <- p(span("Source: NEON.DOC.014040", style = "color:gray"))
       s22 <- "</br>"
-      s23 <- h4("NEON Field Site Map:")
-      withMathJax(HTML(paste(s1,s1.1, s1.2, s2,s2.1,s3, s4,s5,s6, s7,s8,s9, s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22,s23, sep = '')))
+      s23 <- h4("Download Full Data Sets:")
+      s24 <- p(a(strong("Plant Phenology Observations"), href = "https://data.neonscience.org/data-product-view?dpCode=DP1.10055.001"))
+      s25 <- p(a(strong("Single Aspirated Air Temperature"), href = "https://data.neonscience.org/data-product-view?dpCode=DP1.00002.001"))
+      s26 <- "</br>"
+      s27 <- h4("NEON Field Site Map:")
+      withMathJax(HTML(paste(s1,s1.1, s1.2, s2,s3, s4,s5,s6, s7,s8,s9, s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22,s23,s24,s25,s26,s27, sep = '')))
       })
     
     output$map <- renderPlotly({
