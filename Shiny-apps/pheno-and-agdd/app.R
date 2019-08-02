@@ -35,7 +35,7 @@ ui <-
     fluidRow(div(style = "margin:-1200px"),
          column(3, style = "margin-bottom:-20px",
           # choose which site you want to observe
-          pickerInput("select", label = h5(span("NEON Sites", style = "color:darkblue")), 
+          pickerInput("selectSite", label = h5(span("NEON Sites", style = "color:darkblue")), 
                       choices = list("Harvard Forest (HARV)" = "HARV", "Bartlett Experimental Forest (BART)" = "BART", 
                                 "Smithsonian Environmental Research Center (SERC)" = "SERC", "University of Notre Dame Environmental Research Center (UNDE)" = "UNDE", 
                                  "The Universtiy of Kansas Field Station (UKFS)" = "UKFS", "Oak Ridge (ORNL)" = "ORNL",
@@ -45,13 +45,13 @@ ui <-
 
         column(4,style="margin-right:-12px; margin-bottom:-20px",
 
-         # can choose if you want to look at phenophases, AGDDs, or both using checkbox buttons
-         prettyRadioButtons("option", label = h5(span("Choose what to observe", style = "color:darkblue")), choices = c("Phenophases" ="phenos","AGDDs"="agdd", "Phenophases & AGDDs"="both"),
+         # can choose if you want to look at phenophases, AGDDs, or both using radio buttons
+         prettyRadioButtons("observeOption", label = h5(span("Choose what to observe", style = "color:darkblue")), choices = c("Phenophases" ="phenos","AGDDs"="agdd", "Phenophases & AGDDs"="both"),
                              selected = NULL, status = "danger", outline = TRUE, inline = TRUE)
         ),
           column(4, style="margin-left:-30px; margin-bottom:-20px",
           # checkbox so can pick as many years that are available for that site as you want
-          prettyCheckboxGroup("checkGroup", label = h5(span("Years", style = "color:darkblue")), 
+          prettyCheckboxGroup("checkYears", label = h5(span("Years", style = "color:darkblue")), 
                              choices = list("2015"="2015","2016"="2016", "2017" = "2017", "2018"="2018", "2019"="2019"), 
                              selected = NULL, status = "danger", outline = TRUE, inline = TRUE)
           )
@@ -61,6 +61,7 @@ ui <-
          # button to plot that you have to click again to refresh the graph
           actionButton("goplot", label = span("PLOT", style = "color:darkblue"))),
         
+         # button to choose to view application info
         fluidRow(
         column(1, style = "margin-top:-100px; margin-left:-175px",
          prettyCheckboxGroup("info",label = "" , choices =  c("SEE APP INFO"="yes"),status = "danger", outline = TRUE, bigger = TRUE, thick = TRUE
@@ -71,10 +72,10 @@ ui <-
 
   # depending on what the user chooses to observe, the following plots are made
         mainPanel(
-          conditionalPanel(condition = "input.option == 'agdd'", plotlyOutput("yearsPlot", width = "150%", height = "500px")),
-          conditionalPanel(condition = "input.option == 'phenos'", plotlyOutput("phenoPlot", width = "150%", height = "500px")),
-          conditionalPanel(condition = "input.option == 'both'", plotOutput("bothPlot", width = "150%", height = "500px")),
-          conditionalPanel(condition = "input.info == 'yes'", htmlOutput("infoText", style = "margin-top:-470px; margin-right:-350px"), 
+          conditionalPanel(condition = "input.observeOption == 'agdd'", plotlyOutput("yearsPlot", width = "150%", height = "500px")),
+          conditionalPanel(condition = "input.observeOption == 'phenos'", plotlyOutput("phenoPlot", width = "150%", height = "500px")),
+          conditionalPanel(condition = "input.observeOption == 'both'", plotOutput("bothPlot", width = "150%", height = "500px")),
+          conditionalPanel(condition = "input.info == 'yes'", withMathJax(htmlOutput("infoText", style = "margin-top:-470px; margin-right:-350px")), 
                            plotlyOutput("map", width = "150%", height = "500px"))
         )
     )
@@ -85,21 +86,21 @@ server <- function(input, output, session) {
 
   # updating the choices based on years avaiable for each site.
   observe({
-    x <- input$select
+    x <- input$selectSite
     if (x == "ORNL" | x == "BART" | x=="HARV" | x=="UNDE")
-      updatePrettyCheckboxGroup(session, "checkGroup", choices = list("2015"="2015",
+      updatePrettyCheckboxGroup(session, "checkYears", choices = list("2015"="2015",
                                                                      "2016"="2016", "2017" = "2017", "2018"="2018", "2019"="2019"), prettyOptions = list(status = "danger", outline = TRUE), inline = TRUE)
     if (x == "SERC" | x=="UKFS" | x=="ABBY")
-      updatePrettyCheckboxGroup(session, "checkGroup", choices = list("2016"="2016", "2017" = "2017", "2018"="2018", "2019"="2019"), prettyOptions = list(status = "danger", outline = TRUE), inline = TRUE)
+      updatePrettyCheckboxGroup(session, "checkYears", choices = list("2016"="2016", "2017" = "2017", "2018"="2018", "2019"="2019"), prettyOptions = list(status = "danger", outline = TRUE), inline = TRUE)
     if (x=="CLBJ" | x=="TOOL")
-      updatePrettyCheckboxGroup(session, "checkGroup", choices = list("2017" = "2017", "2018"="2018"), prettyOptions = list(status = "danger", outline = TRUE), inline = TRUE)
+      updatePrettyCheckboxGroup(session, "checkYears", choices = list("2017" = "2017", "2018"="2018"), prettyOptions = list(status = "danger", outline = TRUE), inline = TRUE)
     if (x=="BONA")
-      updatePrettyCheckboxGroup(session, "checkGroup", choices = list( "2018"="2018", "2019"="2019"), prettyOptions = list(status = "danger", outline = TRUE), inline = TRUE)
+      updatePrettyCheckboxGroup(session, "checkYears", choices = list( "2018"="2018", "2019"="2019"), prettyOptions = list(status = "danger", outline = TRUE), inline = TRUE)
 
     })
 
 
-  checkedGroups <- eventReactive(input$goplot, {input$checkGroup})
+  checkedGroups <- eventReactive(input$goplot, {input$checkYears})
   
   
 
@@ -110,13 +111,13 @@ server <- function(input, output, session) {
   # if they haven't chosen a year, this appears
    
    validate(
-     need(input$checkGroup != "", "Please select at least one year to plot.")
+     need(input$checkYears != "", "Please select at least one year to plot.")
    )
 
   # making a progress bar
    # updates whenever setProgress() is used with a different value
    withProgress(message = "Making plot", value = 0,{
-     siteO <- input$select
+     siteO <- input$selectSite
      yr <- checkedGroups()
      sort(yr)
      
@@ -233,15 +234,15 @@ server <- function(input, output, session) {
  output$phenoPlot <- renderPlotly({
   # prints this is user hasn't chosen a year
     validate(
-      need(input$checkGroup != "", "Please select at least one year to plot.")
+      need(input$checkYears != "", "Please select at least one year to plot.")
     )
    
    # making a progress bar
    # updates whenever setProgress() is used with a different value
    withProgress(message = "Making plot", value = 0, {
      
-   siteO <- input$select
-   yr <- input$checkGroup
+   siteO <- input$selectSite
+   yr <- input$checkYears
    sort(yr)
    
    # loading data from API
@@ -312,8 +313,8 @@ server <- function(input, output, session) {
    pheno <- phe_ind %>%
      filter(growthForm=="Deciduous broadleaf")
    pheno <- pheno %>%
-     filter(siteID %in% input$select) %>%
-     filter(year %in% input$checkGroup)
+     filter(siteID %in% input$selectSite) %>%
+     filter(year %in% input$checkYears)
    
    # adding common names
    pheno <- mutate(pheno, commonName = ifelse(taxonID %in% "ACRU", "Red Maple", 
@@ -339,7 +340,7 @@ server <- function(input, output, session) {
    # only look at the yes's
    pheno <- filter(pheno, phenophaseStatus %in% "yes")
    
-   # counting total individuals by day for each commonName
+   # counting total observations by day for each commonName
    total <- pheno %>%
      group_by(commonName) %>%
      count(date)
@@ -356,7 +357,7 @@ server <- function(input, output, session) {
    pheno <- left_join(pheno, phenos, by = c("date", "commonName", "phenophaseName"))
    
    # calculating percentage by dividing count of each phenophase by total count
-   pheno$percent <- ((pheno$number)/pheno$total)*100
+   pheno$percentObs <- ((pheno$number)/pheno$total)*100
    
 
    
@@ -375,12 +376,12 @@ server <- function(input, output, session) {
 
    #observeEvent(
    # plot the graph 
-   p <- ggplot(pheno, aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName,group = 1,
-                                text = paste("</br>Date:",monthDay, "</br>Percent:",percent, "</br>Phenophase:", phenophaseName))) +
+   p <- ggplot(pheno, aes(x = dayOfYear, y = percentObs, fill = phenophaseName, color = phenophaseName,group = 1,
+                                text = paste("</br>Date:",monthDay, "</br>Percent:",percentObs, "</br>Phenophase:", phenophaseName))) +
       #geom_density(alpha=0.3,stat = "identity", position = "stack") +
      geom_density(alpha=0.3,stat = "identity", position = position_dodge(width = .5)) +
       theme_bw() + facet_grid(cols = vars(commonName),rows = vars(year), scale = "free_y") +
-      xlab("Day Of Year") + ylab("Percentage of Individuals\nin Each Phenophase") + xlim(0,366) +
+      xlab("Day Of Year") + ylab("Percentage of Observations\nin Each Phenophase") + xlim(0,366) +
       ggtitle("Plant Phenophase Density for Selected Site") +
       theme(plot.title = element_text(lineheight = 1, face = "bold", size = 20, hjust = 0.5),
             axis.title = element_text(lineheight = .8, size = 15),
@@ -418,7 +419,7 @@ server <- function(input, output, session) {
     output$bothPlot <- renderPlot({
       # prints until user selects a year
       validate(
-        need(input$checkGroup != "", "Please select at least one year to plot.")
+        need(input$checkYears != "", "Please select at least one year to plot.")
       )
       
       #eventReactive(input$goplot,{
@@ -427,8 +428,8 @@ server <- function(input, output, session) {
       # updates whenever setProgress() is used with a different value
       withProgress(message = "Making plot", value = 0, {
       
-      siteO <- input$select
-      yr <- input$checkGroup
+      siteO <- input$selectSite
+      yr <- input$checkYears
       sort(yr)
       
       # loading phenology data from API
@@ -495,8 +496,8 @@ server <- function(input, output, session) {
       pheno <- phe_ind %>%
         filter(growthForm=="Deciduous broadleaf")
       pheno <- pheno %>%
-        filter(siteID %in% input$select) %>%
-        filter(year %in% input$checkGroup)
+        filter(siteID %in% input$selectSite) %>%
+        filter(year %in% input$checkYears)
       
       # adding common names
       pheno <- mutate(pheno, commonName = ifelse(taxonID %in% "ACRU", "Red Maple", 
@@ -539,7 +540,7 @@ server <- function(input, output, session) {
       pheno <- left_join(pheno, phenos, by = c("date", "commonName", "phenophaseName"))
       
       # calculating percentage by dividing count of each phenophase by total count
-      pheno$percent <- ((pheno$number)/pheno$total)*100
+      pheno$percentObs <- ((pheno$number)/pheno$total)*100
       
 
       pheno$dayOfYear <- yday(pheno$date)
@@ -617,9 +618,9 @@ server <- function(input, output, session) {
      # observeEvent(
       # plot
       # can hover on solo graphs but not this one
-      ggplot(data=pheno, mapping=aes(x = dayOfYear, y = percent, fill = phenophaseName, color = phenophaseName
+      ggplot(data=pheno, mapping=aes(x = dayOfYear, y = percentObs, fill = phenophaseName, color = phenophaseName
                                                # ,group =1,
-                                               # text = paste("</br>Date:",monthDay, "</br>Percent:",percent, "</br>Phenophase:", phenophaseName)
+                                               # text = paste("</br>Date:",monthDay, "</br>Percent:",percentObs, "</br>Phenophase:", phenophaseName)
                                            )) +
         geom_density(alpha=0.3,stat = "identity", position = position_dodge(width = 0.5)) +
         theme_bw() + facet_grid(cols = vars(commonName),rows = vars(year), scale = "free_y") +
@@ -629,7 +630,7 @@ server <- function(input, output, session) {
                                        #, group=1, text = paste("</br>Date:", monthDay, "</br>AGDDs:", AGDD)
                                        ), inherit.aes = FALSE, size = 1.5, color = "blue")+
         scale_y_continuous(sec.axis = sec_axis(~.*65, name = "AGDDs")) +
-        labs(x = "Day of Year", y = "Percentage of Individuals\nin Each Phenophase") + ggtitle("DBL Phenophases and AGDDs") +
+        labs(x = "Day of Year", y = "Percentage of Observations\nin Each Phenophase") + ggtitle("Deciduous Broadleaf Phenophases and AGDDs") +
         theme(plot.title = element_text(lineheight = 1, face = "bold", size = 20, hjust = 0.5),
               axis.title = element_text(lineheight = .8, size = 15),
               legend.title = element_text(lineheight = .8, size = 20),
@@ -649,7 +650,13 @@ server <- function(input, output, session) {
     # includes creator, date published, definitions, agdd calculation info, and phenophase descriptions
     output$infoText<- renderUI({
       s1 <- h4(span("Creator: Karlee Bradley", style = "color:darkblue"))
-      s2 <- h4(span("Date Published: July 29, 2019", style = "color:darkblue"))
+      s1.1 <- p("GitHub account: kbradle1")
+      s1.2 <- p("Email: karleerbradley@gmail.com")
+      s2 <- h4(span("Date Published: August 2, 2019", style = "color:darkblue"))
+   # would change once on NEON server
+      s2.1 <- h5(span("Link to shiny app:", style = "color:darkblue"), a("https://kbradle1.shinyapps.io/pheno-and-agdd/"))
+   # below is the option to add the link to the data story once published on the blog, would have to add s2.2 to paste function below
+      #s2.2 <- h5(span("Link to associated data story:", style = "color:darkblue"), a())
       s3 <- "</br>"
       s4 <- h4("Definitions:")
       s5 <- p(strong("Phenology:"),"the study of cyclic and seasonal natural phenomena, especially in relation to climate and plant and animal life")
@@ -659,7 +666,7 @@ server <- function(input, output, session) {
       s9 <- "</br>"
       s10 <- h4("AGDD Calculation Information:")
       s11 <- p(strong("Base Temperature:"),"50˚F")
-      s12 <- p(strong("Method:"),"Temperature Averaging")
+      s12 <- p(strong("Method:"),"Temperature Averaging: $$GDD = \\frac{T_{max} + T_{min}}{2} - T_{base}$$")
       s13 <- "</br>"
       s14 <- h4("Phenophase Descriptions:")
       s15 <- p(strong("Breaking leaf buds:"),"One or more breaking leaf buds are visible on the plant. A leaf bud is considered", em("breaking"),"once a green leaf tip is visible at the end of the bud, but before the first leaf from the bud has unfolded to expose the leaf stalk (petiole) or leaf base.")
@@ -668,9 +675,10 @@ server <- function(input, output, session) {
       s18 <- p(strong("Open flowers:"), "One or more open, fresh flowers are visible on the plant. Flowers are considered", em("open"), "when the reproductive parts (male stamens or female pistils) are visible between or within unfolded or open flower parts (petals, floral tubes, or sepals).")
       s19 <- p(strong("Colored leaves:"), "One or more leaves show some of their typical late-season or drought-induced color. ")
       s20 <- p(strong("Falling leaves:"), "One or more leaves are falling or have recently fallen from the plant.")
-      s21 <- "</br>"
-      s22 <- h4("NEON Field Site Map:")
-      HTML(paste(s1, s2,s3, s4,s5,s6, s7,s8,s9, s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22, sep = ''))
+      s21 <- p(span("Source: NEON.DOC.014040", style = "color:gray"))
+      s22 <- "</br>"
+      s23 <- h4("NEON Field Site Map:")
+      withMathJax(HTML(paste(s1,s1.1, s1.2, s2,s2.1,s3, s4,s5,s6, s7,s8,s9, s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22,s23, sep = '')))
       })
     
     output$map <- renderPlotly({
@@ -699,6 +707,8 @@ server <- function(input, output, session) {
                              b = 0, t = 25,
                              pad = 0), showlegend = FALSE, hoverlabel = list(bgcolor = "white", font = list(color = "black"), bordercolor = "magenta"))
       map
+      
+
     })
 
 }
