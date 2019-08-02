@@ -12,8 +12,10 @@ library(lubridate)
 library(neonUtilities)
 library(geoNEON)
 library(plotly)
+library(zip)
 
 Sys.setenv('MAPBOX_TOKEN' = 'pk.eyJ1Ijoia2JyYWRsZTEiLCJhIjoiY2p5b3JrcG1yMDFvazNibzJ0bHMzcGdiayJ9.y4HFULDWOBCcT9hA6Pr9hg')
+#Sys.setenv(R_ZIPCMD="/usr/bin/zip")
 
 
 # Define UI for application 
@@ -56,10 +58,14 @@ ui <-
                              selected = NULL, status = "danger", outline = TRUE, inline = TRUE)
           )
           ,
-        column(1, style="margin-left:-50px; margin-top:15px; margin-bottom:-20px",
+        column(1, style="margin-left:-80px; margin-top:2px; margin-bottom:-20px",
          
          # button to plot that you have to click again to refresh the graph
-          actionButton("goplot", label = span("PLOT", style = "color:darkblue"))),
+          actionButton("goplot", label = span("PLOT", style = "color:darkblue")),
+         
+         downloadButton("downloadData", "Download Cleaned Dataset")),
+        
+      
         
          # button to choose to view application info
         fluidRow(
@@ -177,6 +183,18 @@ server <- function(input, output, session) {
        filter(siteID %in% siteO) %>%
        filter(year %in% yr)
      
+     
+     # downloading filtered data for agdd
+     output$downloadData <- downloadHandler(
+        
+        filename = function() {
+           paste(input$observeOption, input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-")
+        },
+        content = function(file){
+           write.csv(site_select, file)
+        }
+     )
+     
 
   # font stuff for legend and axes
      l <- list(
@@ -223,6 +241,8 @@ server <- function(input, output, session) {
    })
  
 # })
+ 
+
    
  
  
@@ -365,6 +385,20 @@ server <- function(input, output, session) {
    pheno$year <- substr(pheno$date, 1, 4)
    pheno$monthDay <- format.Date(pheno$date, format="%B %d")
    pheno$phenophaseName <- factor(pheno$phenophaseName, levels = c("Leaves", "Falling leaves", "Colored leaves",  "Increasing leaf size","Breaking leaf buds",  "Open flowers"))
+   
+   
+   # downloading filtered data for phenophases
+   output$downloadData <- downloadHandler(
+      
+      filename = function() {
+         paste("phenophases", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-")
+      },
+      content = function(file){
+         write.csv(pheno, file)
+      }
+   )
+   
+   
    
   # legend font stuff
    l <- list(
@@ -596,6 +630,31 @@ server <- function(input, output, session) {
       years_data <- data.table(years_data)
       years_data[, AGDD := cumsum(GDD), by=list(year, siteID)]
       
+      # output$downloadData <- downloadHandler(
+      #    
+      #    filename = function() {
+      #       paste("phenophases", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-")
+      #    },
+      #    content = function(file){
+      #       write.csv(pheno, file)
+      #    }
+      # )
+      
+      output$downloadData <- downloadHandler(
+         
+         filename = function(){
+            paste("phenophasesAGDD", input$selectSite, paste(yr, collapse = "."), ".zip", sep = "-")
+            },
+         content = function(file){
+            write.csv(pheno, file= paste("phenophases", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-"))
+            write.csv(site_select, file=   paste("AGDD", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-"))
+            zip(zipfile = file, files = c(paste("phenophases", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-"),
+                                          paste("AGDD", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-")))
+            #if(file.exists(paste0(file, ".zip"))) {file.rename(paste0(file, ".zip"), file)}
+         },
+         contentType = "application/zip"
+      )
+      
       setProgress(value = 0.9)
       
       # filtering the data based on user input
@@ -684,6 +743,7 @@ server <- function(input, output, session) {
     output$map <- renderPlotly({
       
       field_sites <- read.csv(file = "field-sites.csv", stringsAsFactors = FALSE)
+      
       
       sites <- c("HARV", "SERC", "UNDE", "BONA", "BART", "UKFS", "ORNL", "CLBJ","ABBY", "TOOL")
       
