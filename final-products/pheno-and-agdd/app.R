@@ -10,7 +10,6 @@ library(ggplot2)
 library(dplyr)
 library(lubridate)
 library(neonUtilities)
-library(geoNEON)
 library(plotly)
 library(zip)
 
@@ -136,9 +135,11 @@ server <- function(input, output, session) {
                                startdate = c(paste(checkedGroups()[1],"-01", sep = "")), enddate = c(paste(tail(checkedGroups(), n=1), "-12", sep = "")), avg = "30")
      setProgress(value = 0.8)
      SAAT <- agddLoad$SAAT_30min
-     df <- SAAT
+    
      
      # cleaning the data:
+     
+
      
      # define function to convert temp c to f 
      c_to_f <- function(x)  (x * 1.8 + 32)
@@ -149,14 +150,16 @@ server <- function(input, output, session) {
      df_2$minTempF <- c_to_f(df_2$tempSingleMinimum)
      df_2$maxTempF <- c_to_f(df_2$tempSingleMaximum)
      
+
      #pull date value from dateTime
      # pulls the first 10 indices from endDateTime (yyyy-mm-dd) and creates a new column with just the date
      df_2$date <- substr(df_2$endDateTime, 1, 10)
+     df_2 <- df_2 %>%
+        select(date,siteID, verticalPosition, minTempF, maxTempF)
      setProgress(value = 0.9)
      years_data <- df_2%>%
        group_by(date, siteID)%>%
        arrange(date) %>% # had to add this so that the dates were in order
-       select(siteID, date, verticalPosition, minTempF, maxTempF) %>%
        mutate(dayMax=max(maxTempF), dayMin=min(minTempF)) %>% 
        select(siteID, date, dayMax, dayMin)%>%
        distinct() # only keeps one row for each date with the max, min, and mean
@@ -180,7 +183,6 @@ server <- function(input, output, session) {
      
      # filtering data based on user selection
      site_select <- years_data %>%
-       filter(siteID %in% siteO) %>%
        filter(year %in% yr)
      
      
@@ -278,17 +280,21 @@ server <- function(input, output, session) {
    ind <- phenoLoad$phe_perindividual
    status <- phenoLoad$phe_statusintensity
    
-   # remove the uid columns for both the ind and the status data
-   ind <- select(ind, -uid)
-   status <- select(status, -uid)
+# cleaning data in different order than before
+   # select columns we care about for dataframes
+   ind <- ind %>%
+      select(editedDate, date,  taxonID, scientificName, growthForm, individualID)
+   
+   status <- status %>%
+      select(domainID, siteID, date, editedDate, dayOfYear, phenophaseName, phenophaseStatus, individualID)
    
    # remove duplicate rows in the ind data and the status data
    ind_noD <- distinct(ind)
    status_noD <- distinct(status)
    
    # rename variables in the status object to have "Stat" at the end of the variable name before joining the datasets
-   status_noD <- rename(status_noD, editedDateStat = editedDate, measuredByStat = measuredBy, recordedByStat = recordedBy,
-                        samplingProtocolVersionStat = samplingProtocolVersion, remarksStat = remarks, dataQFStat = dataQF)
+   status_noD <- rename(status_noD, editedDateStat = editedDate)
+   
    
    # rename variables in ind so that it doesn't conflict later on when joining the dataframes
    ind_noD <- rename(ind_noD, addDate = date)
@@ -297,64 +303,43 @@ server <- function(input, output, session) {
    ind_noD$editedDate <- as.Date(ind_noD$editedDate)
    status_noD$date <- as.Date(status_noD$date)
    
-   # retain only the latest editedDate for each individualID on ind and get rid of duplicate dates
    ind_lastnoD <- ind_noD %>%
-     group_by(individualID) %>%
-     filter(editedDate == max(editedDate)) %>%
-     group_by(editedDate, individualID) %>%
-     filter(row_number() == 1)
-   
-   # join the two dataframes together into one table
-   # this will be the table that is used to then narrow sites and species and phenophases
+      group_by(individualID) %>%
+      filter(editedDate == max(editedDate)) %>%
+      group_by(editedDate, individualID) %>%
+      filter(row_number() == 1)
+   # join data frames
    phe_ind <- left_join(status_noD, ind_lastnoD)
    
-   # removing columns with mostly NAs that aren't needed
-   phe_ind <- select(phe_ind, -dayOfYear, -samplingProtocolVersionStat, -remarksStat, -dataQFStat)
-   phe_ind <- select(phe_ind, -geodeticDatum, -coordinateUncertainty, -elevationUncertainty, -elevationUncertainty, -sampleLatitude, 
-                     -sampleLongitude, -sampleCoordinateUncertainty, -sampleElevation, -sampleElevationUncertainty, 
-                     -identificationQualifier, -vstTag, -dataQF)
-   # removing other columns that don't seem to be relevant
-   phe_ind <- select(phe_ind, -measuredByStat, -recordedByStat, -sampleGeodeticDatum, -samplingProtocolVersion,
-                     -measuredBy, -identifiedBy, -recordedBy)
-   
-   setProgress(value = 0.9)
-   # adding other date columns for better date analysis
+   # add year column
    phe_ind$year <- substr(phe_ind$date, 1, 4)
    
-   # using geoNEON package to find locations
-   # adding latitude and longitude from geoNEON to phe_ind, and elevation
-   spatialOnly <- def.extr.geo.os(phe_ind, 'namedLocation', locOnly = T)
-   phe_ind$latitude <- spatialOnly$api.decimalLatitude[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
-   phe_ind$longitude <- spatialOnly$api.decimalLongitude[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
-   phe_ind$elevation <- spatialOnly$api.elevation[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
    
-  
    # filter the data based on user input
    pheno <- phe_ind %>%
-     filter(growthForm=="Deciduous broadleaf")
+      filter(growthForm=="Deciduous broadleaf")
    pheno <- pheno %>%
-     filter(siteID %in% input$selectSite) %>%
-     filter(year %in% input$checkYears)
+      filter(year %in% input$checkYears)
    
    # adding common names
    pheno <- mutate(pheno, commonName = ifelse(taxonID %in% "ACRU", "Red Maple", 
-                                       ifelse(taxonID %in% "QURU", "Northern Red Oak", 
-                                       ifelse(taxonID %in% "ACPE", "Snakebark Maple", 
-                                       ifelse(taxonID %in% "FAGR", "American Beech",
-                                       ifelse(taxonID %in% "LITU", "Tulip Tree", 
-                                       ifelse(taxonID %in% "LIST2", "Sweetgum",
-                                       ifelse(taxonID %in% "LIBE3", "Northern Spicebush",
-                                       ifelse(taxonID %in% "POTR5", "Quaking Aspen",
-                                       ifelse(taxonID %in% "ACSA3", "Sugar Maple",
-                                       ifelse(taxonID %in% "COCO6", "Beaked Hazelnut",
-                                       ifelse(taxonID %in% "SYOR", "Coralberry",
-                                       ifelse(taxonID %in% "CAOV2", "Shagbark Hickory",
-                                       ifelse(taxonID %in% "CEOC", "Common Hackberry",
-                                       ifelse(taxonID %in% "QUMO4", "Chestnut Oak",
-                                       ifelse(taxonID %in% "COFL2", "Flowering Dogwood",
-                                       ifelse(taxonID %in% "QUMA3", "Blackjack Oak",
-                                       ifelse(taxonID %in% "COCOC", "California Hazelnut",
-                                       ifelse(taxonID %in% "BEGL", "Resin Birch", "other")))))))))))))))))))
+                                              ifelse(taxonID %in% "QURU", "Northern Red Oak", 
+                                                     ifelse(taxonID %in% "ACPE", "Snakebark Maple", 
+                                                            ifelse(taxonID %in% "FAGR", "American Beech",
+                                                                   ifelse(taxonID %in% "LITU", "Tulip Tree", 
+                                                                          ifelse(taxonID %in% "LIST2", "Sweetgum",
+                                                                                 ifelse(taxonID %in% "LIBE3", "Northern Spicebush",
+                                                                                        ifelse(taxonID %in% "POTR5", "Quaking Aspen",
+                                                                                               ifelse(taxonID %in% "ACSA3", "Sugar Maple",
+                                                                                                      ifelse(taxonID %in% "COCO6", "Beaked Hazelnut",
+                                                                                                             ifelse(taxonID %in% "SYOR", "Coralberry",
+                                                                                                                    ifelse(taxonID %in% "CAOV2", "Shagbark Hickory",
+                                                                                                                           ifelse(taxonID %in% "CEOC", "Common Hackberry",
+                                                                                                                                  ifelse(taxonID %in% "QUMO4", "Chestnut Oak",
+                                                                                                                                         ifelse(taxonID %in% "COFL2", "Flowering Dogwood",
+                                                                                                                                                ifelse(taxonID %in% "QUMA3", "Blackjack Oak",
+                                                                                                                                                       ifelse(taxonID %in% "COCOC", "California Hazelnut",
+                                                                                                                                                              ifelse(taxonID %in% "BEGL", "Resin Birch", "other")))))))))))))))))))
    
    
    # only look at the yes's
@@ -362,8 +347,8 @@ server <- function(input, output, session) {
    
    # counting total observations by day for each commonName
    total <- pheno %>%
-     group_by(commonName) %>%
-     count(date)
+      group_by(commonName) %>%
+      count(date)
    # renaming counted column to "total"
    names(total)[which(names(total) == "n")] <- "total"
    # joining total dateframe to df
@@ -371,21 +356,22 @@ server <- function(input, output, session) {
    
    # counting total individuals by day for each phenophase for each commonName
    phenos <- pheno %>%
-     group_by(commonName, phenophaseName) %>%
-     count(date)
+      group_by(commonName, phenophaseName) %>%
+      count(date)
    names(phenos)[which(names(phenos)=="n")] <- "number"
    pheno <- left_join(pheno, phenos, by = c("date", "commonName", "phenophaseName"))
    
    # calculating percentage by dividing count of each phenophase by total count
    pheno$percentObs <- ((pheno$number)/pheno$total)*100
    
-
-   
+   # adding other columns
    pheno$dayOfYear <- yday(pheno$date)
    pheno$year <- substr(pheno$date, 1, 4)
    pheno$monthDay <- format.Date(pheno$date, format="%B %d")
    pheno$phenophaseName <- factor(pheno$phenophaseName, levels = c("Leaves", "Falling leaves", "Colored leaves",  "Increasing leaf size","Breaking leaf buds",  "Open flowers"))
    
+   
+
    
    # downloading filtered data for phenophases
    output$downloadData <- downloadHandler(
@@ -432,7 +418,6 @@ server <- function(input, output, session) {
      add_annotations(text="Phenophase", xref="paper", yref="paper",x=.5, xanchor="top",y=-.3, yanchor="bottom",legendtitle=TRUE, showarrow=FALSE) 
    
    # changing position of x and y axis titles
-   # x was -.04
    gp[['x']][['layout']][['annotations']][[2]][['x']] <- -0.02
    gp %>% layout(margin = list(l = 75))
    
@@ -519,18 +504,12 @@ server <- function(input, output, session) {
       # adding other date columns for better date analysis
       phe_ind$year <- substr(phe_ind$date, 1, 4)
       
-      # using geoNEON package to find locations
-      # adding latitude and longitude from geoNEON to phe_ind, and elevation
-      spatialOnly <- def.extr.geo.os(phe_ind, 'namedLocation', locOnly = T)
-      phe_ind$latitude <- spatialOnly$api.decimalLatitude[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
-      phe_ind$longitude <- spatialOnly$api.decimalLongitude[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
-      phe_ind$elevation <- spatialOnly$api.elevation[match(phe_ind$namedLocation, spatialOnly$data.locationName)]
+
       
       # filtering pheno data based on user input
       pheno <- phe_ind %>%
         filter(growthForm=="Deciduous broadleaf")
       pheno <- pheno %>%
-        filter(siteID %in% input$selectSite) %>%
         filter(year %in% input$checkYears)
       
       # adding common names
@@ -605,11 +584,12 @@ server <- function(input, output, session) {
       # pulls the first 10 indices from endDateTime (yyyy-mm-dd) and creates a new column with just the date
       df_2$date <- substr(df_2$endDateTime, 1, 10)
       
+      df_2 <- df_2 %>%
+         select(siteID, date, verticalPosition, minTempF, maxTempF)
+      
       years_data <- df_2%>%
         group_by(date, siteID)%>%
-        #filter(year(date)=="2017") %>% # added the year here so that AGDDs starts from beginning of year
         arrange(date) %>% # had to add this so that the dates were in order
-        select(siteID, date, verticalPosition, minTempF, maxTempF) %>%
         mutate(dayMax=max(maxTempF), dayMin=min(minTempF)) %>% 
         select(siteID, date, dayMax, dayMin)%>%
         distinct() # only keeps one row for each date with the max, min, and mean
@@ -629,38 +609,29 @@ server <- function(input, output, session) {
       require(data.table)
       years_data <- data.table(years_data)
       years_data[, AGDD := cumsum(GDD), by=list(year, siteID)]
-      
-      # output$downloadData <- downloadHandler(
-      #    
-      #    filename = function() {
-      #       paste("phenophases", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-")
-      #    },
-      #    content = function(file){
-      #       write.csv(pheno, file)
-      #    }
-      # )
-      
-      output$downloadData <- downloadHandler(
-         
-         filename = function(){
-            paste("phenophasesAGDD", input$selectSite, paste(yr, collapse = "."), ".zip", sep = "-")
-            },
-         content = function(file){
-            write.csv(pheno, file= paste("phenophases", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-"))
-            write.csv(site_select, file=   paste("AGDD", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-"))
-            zip(zipfile = file, files = c(paste("phenophases", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-"),
-                                          paste("AGDD", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-")))
-            #if(file.exists(paste0(file, ".zip"))) {file.rename(paste0(file, ".zip"), file)}
-         },
-         contentType = "application/zip"
-      )
+   
       
       setProgress(value = 0.9)
       
       # filtering the data based on user input
       site_select <- years_data %>%
-        filter(siteID %in% siteO) %>%
         filter(year %in% yr)
+      
+      # download the data for agdds and phenophases in a zipped file with two csv files
+      output$downloadData <- downloadHandler(
+         
+         filename = function(){
+            paste("phenophasesAGDD", input$selectSite, paste(yr, collapse = "."), ".zip", sep = "-")
+         },
+         content = function(file){
+            write.csv(pheno, file= paste("phenophases", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-"))
+            write.csv(site_select, file=   paste("AGDD", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-"))
+            zip(zipfile = file, files = c(paste("phenophases", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-"),
+                                          paste("AGDD", input$selectSite, paste(yr, collapse = "."), ".csv", sep = "-")))
+            
+         },
+         contentType = "application/zip"
+      )
       
       
       ay <- list(overlaying = "y", side = "right", title = "AGDDs", autotick = TRUE, showlines=FALSE)
